@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 /// Renders the popup to PNG for visual review (S25 UI checklist). Runs only
 /// with TEST_RUNNER_LT_RENDER_DIR=<dir>; synthetic text only.
@@ -17,7 +17,7 @@ struct PopupRenderTests {
         ("streaming-long", PopupContent(title: "Vietnamese → English", body: String(repeating: "Người dùng cần kiểm tra lại báo cáo quyết toán trước cuối ngày. Ỹ ỹ Ậ ậ Ữ ữ. ", count: 12), phase: .streaming, alternateDirection: .englishToVietnamese)),
         ("failed-partial-worst", PopupContent(title: "Chinese, Simplified → Vietnamese (guessed)", body: "Xin chào, đây là một phần bản dịch", phase: .failed, action: .retry, message: "Ollama: model requires more system memory (9.8 GiB) than is available (7.1 GiB)", alternateDirection: french.switched)),
         ("failed-empty", PopupContent(title: "English → Vietnamese", body: "", phase: .failed, action: .retry, message: "Ollama is not running.", alternateDirection: .vietnameseToEnglish)),
-        ("notice-permission", PopupContent(title: "", body: "Local Translator needs Accessibility permission to read selected text.", phase: .notice, action: .openAccessibilitySettings)),
+        ("notice-permission", PopupContent(title: "", body: "Undertone needs Accessibility permission to read selected text.", phase: .notice, action: .openAccessibilitySettings)),
     ]
 
     @Test func renderPopups() throws {

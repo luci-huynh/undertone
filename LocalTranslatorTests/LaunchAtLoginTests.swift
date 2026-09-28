@@ -1,6 +1,6 @@
 import ServiceManagement
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 /// PLAN F07 Launch at Login: off by default, macOS keeps the state.
 @MainActor

@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 /// Synthetic bilingual fixtures. Expectations state intent (clear cases route,
 /// unclear cases are never decided with confidence); they were calibrated on
@@ -63,6 +63,17 @@ struct LanguageRouterTests {
         #expect(LanguageRouter.detect("https://github.com/chienhuynh-dev/local-ai-translator") == .notText)
         #expect(LanguageRouter.detect("someone@example.com 2026-09-28 42%") == .notText)
         #expect(LanguageRouter.detect("  \n ") == .notText)
+    }
+
+    /// L08 review: detection runs on the main actor before the size check, so
+    /// a long run without spaces (minified code, base64, CJK) must stay instant.
+    @Test func longTextWithoutSpacesIsDetectedInstantly() {
+        let start = ContinuousClock.now
+        _ = LanguageRouter.detect(String(repeating: "x@y", count: 500))
+        _ = LanguageRouter.detect(String(repeating: "a", count: 200_000))
+        _ = LanguageRouter.detect(String(repeating: "The meeting starts at nine. ", count: 20_000))
+        #expect(ContinuousClock.now - start < .milliseconds(500))
+        #expect(LanguageRouter.detect("Mail john@example.com about the payment receipt that was sent yesterday.") == .english)
     }
 
     /// Chat apps show links without a scheme, often shortened with “…” (S21a).

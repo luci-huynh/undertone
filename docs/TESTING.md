@@ -1,5 +1,7 @@
 # Testing — S26
 
+0.3.0 (4): renamed to Undertone — bundle ID `local.chienhuynh.Undertone`, log subsystem `local.chienhuynh.Undertone`; entries below keep their historical names.
+
 ## How to run
 
 All from the repo root (commands as in `docs/BUILD.md` / runbook §2).
@@ -8,11 +10,15 @@ All from the repo root (commands as in `docs/BUILD.md` / runbook §2).
 |---|---|---|
 | Unit + integration (T) | `xcodebuild -project LocalTranslator.xcodeproj -scheme LocalTranslator -configuration Debug -destination 'platform=macOS' -derivedDataPath .build/DerivedData test` | Nothing outside the Mac: no Ollama, no network, no TCC grant |
 | Live Ollama | same + `TEST_RUNNER_LT_LIVE_OLLAMA=1` and `-only-testing:LocalTranslatorTests/OllamaLiveTests -only-testing:LocalTranslatorTests/OllamaLiveStreamTests -only-testing:LocalTranslatorTests/OllamaLiveCancelTests -only-testing:LocalTranslatorTests/TranslationQualityLiveTests` | Local Ollama at `127.0.0.1:11434` with `translategemma:12b` |
+| Live translation (L04) | Live Ollama command above + `-only-testing:LocalTranslatorTests/LiveTranslationLiveTests` | Local Ollama + translategemma:12b |
+| Live speech recognition (L03) | same + `TEST_RUNNER_LT_LIVE_ASR=1 TEST_RUNNER_LT_ASR_AUDIO=<dir with long-sample.aiff>` and `-only-testing:LocalTranslatorTests/LiveSpeechLiveTests` | macOS 26+, English speech model; synthetic `say` audio |
 | Popup render review | same + `TEST_RUNNER_LT_RENDER_DIR=<dir>` and `-only-testing:LocalTranslatorTests/PopupRenderTests` | Writes light/dark PNGs of synthetic popups to `<dir>` for a person to look at |
 
 Gated suites are reported as `skipped` in the normal run (5 suites: `OllamaLiveTests`, `OllamaLiveStreamTests`, `OllamaLiveCancelTests`, `TranslationQualityLiveTests`, `PopupRenderTests`); nothing core is skipped silently.
 
 Result at S26: **239 tests in 42 suites passed**, three consecutive runs identical (`.build/logs/s26-repeat-{1,2,3}.log`).
+
+Result at L08 (0.2.0): **320 tests in 58 suites passed**, three runs (`.build/logs/l08-repeat-{1,2}.log`, `l08-final-test.log`). Gated suites added for Feature 2: `LiveTranslationLiveTests` (`LT_LIVE_OLLAMA`), `LiveSpeechLiveTests` (`LT_LIVE_ASR` + `LT_ASR_AUDIO`), `LiveRenderTests` and `SettingsRenderTests` (`LT_RENDER_DIR`). Live Ollama at L08: all suites pass; the quality fixture missed “QA” once (the model expanded it; sampling), 15/15 on the rerun — the same flake was seen once at L02.
 
 ## Rules the suite follows
 

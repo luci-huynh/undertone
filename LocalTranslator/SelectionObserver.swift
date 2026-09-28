@@ -69,7 +69,7 @@ final class SelectionTriggerService {
     @ObservationIgnored private let cursorAnchor: () -> SelectionAnchor?
     @ObservationIgnored private let settleDelay: Duration
     @ObservationIgnored private let visibleDuration: Duration
-    @ObservationIgnored private let logger = Logger(subsystem: "local.chienhuynh.LocalTranslator", category: "trigger")
+    @ObservationIgnored private let logger = Logger(subsystem: "local.chienhuynh.Undertone", category: "trigger")
 
     @ObservationIgnored private var isRunning = false
     @ObservationIgnored private var sequence = 0
@@ -280,8 +280,10 @@ final class SelectionTriggerPanel: SelectionTriggerPresenting {
         background.autoresizingMask = [.width, .height]
 
         let button = FirstClickButton(frame: background.bounds)
-        button.image = NSImage(systemSymbolName: "translate", accessibilityDescription: "Translate")
-            ?? NSImage(systemSymbolName: "character.bubble", accessibilityDescription: "Translate")
+        // 15 pt medium: the default (about 13 pt) looked thin in the 30 pt button.
+        button.image = (NSImage(systemSymbolName: "translate", accessibilityDescription: "Translate")
+            ?? NSImage(systemSymbolName: "character.bubble", accessibilityDescription: "Translate"))?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 15, weight: .medium))
         button.imagePosition = .imageOnly
         button.isBordered = false
         button.contentTintColor = .controlAccentColor

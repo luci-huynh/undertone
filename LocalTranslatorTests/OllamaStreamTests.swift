@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 /// Real `/api/chat` stream shape (captured from Ollama 0.34.4 with a synthetic
 /// sentence), with Vietnamese multi-byte characters in every delta.
@@ -118,7 +118,12 @@ struct OllamaChatStreamClientTests {
     private let messages = [Ollama.ChatMessage(role: "user", content: "prompt")]
 
     private func streamingTransport(body: String, status: Int = 200, chunk: Int = 3) -> MockTransport {
-        let transport = MockTransport { _ in (status, Data(body.utf8), nil) }
+        let transport = MockTransport { request in
+            if request.url?.path == "/api/tags" {
+                return (200, Data(#"{"models":[{"name":"translategemma:12b"},{"name":"nope:1b"}]}"#.utf8), nil)
+            }
+            return (status, Data(body.utf8), nil)
+        }
         transport.chunking = { split($0, every: chunk) }
         return transport
     }
@@ -180,7 +185,8 @@ struct OllamaChatStreamClientTests {
         let client = try OllamaClient(baseURL: base, transport: transport)
         _ = try await collect(client.chatStream(model: "translategemma:12b", messages: messages, options: Ollama.ChatOptions(numCtx: 4096)))
         _ = try await collect(client.chatStream(model: "translategemma:12b", messages: messages))
-        let bodies = try transport.requests.map { try JSONSerialization.jsonObject(with: $0.httpBody ?? Data()) as? [String: Any] }
+        let bodies = try transport.requests.filter { $0.url?.path == "/api/chat" }
+            .map { try JSONSerialization.jsonObject(with: $0.httpBody ?? Data()) as? [String: Any] }
         #expect((bodies[0]?["options"] as? [String: Any])?["num_ctx"] as? Int == 4096)
         #expect(bodies[1]?["options"] == nil)
     }
@@ -237,7 +243,10 @@ private final class SlowStreamTransport: HTTPTransport, @unchecked Sendable {
     var wasCancelled: Bool { lock.withLock { cancelled } }
     var framesSent: Int { lock.withLock { sent } }
 
-    func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) { throw URLError(.unsupportedURL) }
+    func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        (Data(#"{"models":[{"name":"translategemma:12b"}]}"#.utf8),
+         HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+    }
 
     func stream(_ request: URLRequest) -> AsyncThrowingStream<HTTPStreamPart, Error> {
         AsyncThrowingStream { continuation in

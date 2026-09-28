@@ -1,5 +1,7 @@
 # Accessibility permission — S08
 
+Current app: **Undertone**, bundle ID `local.chienhuynh.Undertone` since 0.3.0 (a new identity for TCC: Accessibility and System Audio Recording must be granted again; the old ID's grants were reset). The historical verification below used the old name and ID. Live additionally needs System Audio Recording Only when Start is pressed.
+
 Only Accessibility is required. Screen Recording and Input Monitoring are not requested.
 
 ## App identity (2026-09-27)
@@ -53,3 +55,15 @@ The System Settings page is “Privacy & Security › Accessibility” on older 
 ## Rollback
 
 S08b: remove the four `DEVELOPMENT_TEAM` lines (returns to ad-hoc signing; grants again tied to cdhash). The user switches LocalTranslator off or removes it with “−” in System Settings. Never run a global `tccutil reset`; if ever needed, only `tccutil reset Accessibility local.chienhuynh.LocalTranslator` with user approval.
+
+## Live meeting audio (Feature 2, L02)
+
+| Item | Value |
+|---|---|
+| Permission | “System Audio Recording Only” (TCC `kTCCServiceAudioCapture`), System Settings → Privacy & Security → Screen & System Audio Recording |
+| Usage string | `NSAudioCaptureUsageDescription` in `Config/LocalTranslator-Info.plist` (merged into the generated Info.plist; `INFOPLIST_KEY_…` does not support this key) |
+| When asked | First Live **Start** only — never at launch or for ⌥T. Observed: tccd `authValue=2` (allowed by the user) on the first Start, 2026-09-28 15:21:17 |
+| Microphone | Never requested by the app. Creating the aggregate device makes Core Audio preflight `kTCCServiceMicrophone`; with Hardened Runtime and no `com.apple.security.device.audio-input` entitlement tccd refuses it by policy (“Prompting policy for hardened runtime”), so the app cannot use the microphone at all. Capture of the tapped app is unaffected (verified) |
+| Revoke | Turning the permission off makes new taps deliver nothing; the Live window shows “The app is playing but no sound arrives…” once the source has played ≥ 4 s without a single audio block |
+
+Speech recognition (L03): SpeechAnalyzer/SpeechTranscriber ran with `SFSpeechRecognizer.authorizationStatus() == notDetermined`; the app requests no Speech Recognition permission and declares no `NSSpeechRecognitionUsageDescription`.

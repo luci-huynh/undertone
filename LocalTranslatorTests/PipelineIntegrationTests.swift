@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 /// S26: the whole ⌥T path with the real router, prompt builder, budget,
 /// Ollama client, stream parser, watchdog and coordinator; only the network

@@ -27,7 +27,7 @@ final class LaunchAtLoginService {
     private(set) var lastError: String?
 
     @ObservationIgnored private let item: any LoginItemControlling
-    @ObservationIgnored private let logger = Logger(subsystem: "local.chienhuynh.LocalTranslator", category: "login")
+    @ObservationIgnored private let logger = Logger(subsystem: "local.chienhuynh.Undertone", category: "login")
 
     init(item: any LoginItemControlling) {
         self.item = item

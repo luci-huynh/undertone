@@ -1,7 +1,7 @@
 import ApplicationServices
 import Foundation
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 struct AXCaptureRegressionTests {
     @Test func cancelledActiveReadStopsBeforeNextAttributeAndNewestRuns() async {
@@ -47,7 +47,8 @@ struct AXCaptureRegressionTests {
     private func sample(
         texts: [AXRead<String>] = [.value("hello"), .value("hello")],
         ranges: [AXRead<NSRange>] = [.value(NSRange(location: 1, length: 5)), .value(NSRange(location: 1, length: 5))],
-        focused: Bool = true
+        focused: AXRead<Bool> = .value(true),
+        boundsRequests: BoundsLog? = nil
     ) throws -> FocusedElementReading {
         var textIndex = 0
         var rangeIndex = 0
@@ -55,7 +56,10 @@ struct AXCaptureRegressionTests {
             initial: FocusedElementReading(elementPID: 42),
             text: { defer { textIndex += 1 }; return texts[textIndex] },
             range: { defer { rangeIndex += 1 }; return ranges[rangeIndex] },
-            bounds: { _ in CGRect(x: 10, y: 20, width: 30, height: 40) },
+            bounds: { range in
+                boundsRequests?.ranges.append(range)
+                return CGRect(x: 10, y: 20, width: 30, height: 40)
+            },
             stillFocused: { focused }
         )
     }
@@ -81,7 +85,25 @@ struct AXCaptureRegressionTests {
     }
 
     @Test func changedElementInSameAppIsRejected() throws {
-        #expect(try sample(focused: false).failure == .focusChanged)
+        #expect(try sample(focused: .value(false)).failure == .focusChanged)
+        #expect(try sample(focused: .failed(.invalidUIElement)).failure == .focusChanged)
+    }
+
+    /// L08 review: a slow app is a timeout, not a silent focus change.
+    @Test func timeoutsAreReportedAsTimeouts() throws {
+        #expect(try sample(focused: .failed(.cannotComplete)).failure == .timedOut)
+        #expect(try sample(texts: [.value("hello"), .failed(.cannotComplete)]).failure == .timedOut)
+        #expect(try sample(ranges: [.value(NSRange(location: 1, length: 5)), .failed(.cannotComplete)]).failure == .timedOut)
+    }
+
+    @Test func boundsAreReadLastOnlyForAVerifiedSelectionAndCapped() throws {
+        let log = BoundsLog()
+        _ = try sample(texts: [.value("hello"), .value("world")], boundsRequests: log)
+        #expect(log.ranges.isEmpty)
+        let huge = NSRange(location: 3, length: 50_000)
+        let reading = try sample(ranges: [.value(huge), .value(huge)], boundsRequests: log)
+        #expect(reading.selectedRange == huge)
+        #expect(log.ranges == [NSRange(location: 3, length: ConsistentSelectionReader.maxBoundsLength)])
     }
 
     @Test func consistentlyUnsupportedRangeStillAllowsCursorFallback() throws {
@@ -94,7 +116,11 @@ struct AXCaptureRegressionTests {
 
     @Test func lostRangeOrValidationFailureRejectsCapture() throws {
         #expect(try sample(ranges: [.value(NSRange(location: 1, length: 5)), .failed(.noValue)]).failure == .selectionChanged)
-        #expect(try sample(texts: [.value("hello"), .failed(.cannotComplete)]).failure == .selectionChanged)
+        #expect(try sample(texts: [.value("hello"), .failed(.noValue)]).failure == .selectionChanged)
         #expect(try sample(ranges: [.failed(.cannotComplete), .failed(.cannotComplete)]).failure == .timedOut)
     }
+}
+
+final class BoundsLog {
+    var ranges: [NSRange] = []
 }

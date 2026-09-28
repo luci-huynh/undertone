@@ -1,5 +1,7 @@
 # Build baseline — S04
 
+Current product name: **Undertone** (`Undertone.app`, executable `Undertone`). Since 0.3.0 the bundle ID is `local.chienhuynh.Undertone` and the Swift module `Undertone`; project, target, scheme and source folders remain `LocalTranslator`; signing is unchanged. Commands below still use the same scheme. Old verification entries retain their historical names.
+
 Run commands from `/Users/chien.huynh/MyProjects/local-translator` (the existing Git root).
 
 ## Project identity
@@ -26,8 +28,8 @@ Debug build (B):
 xcodebuild -project LocalTranslator.xcodeproj -scheme LocalTranslator -configuration Debug -destination 'platform=macOS' -derivedDataPath .build/DerivedData build
 ```
 
-CLI product: `.build/DerivedData/Build/Products/Debug/LocalTranslator.app`.
-Xcode's per-user relative DerivedData setting from S03 can append `LocalTranslator/`, yielding `.build/DerivedData/LocalTranslator/Build/Products/Debug/LocalTranslator.app`. That UI setting is ignored by Git; the CLI command above is the reproducible baseline.
+CLI product: `.build/DerivedData/Build/Products/Debug/Undertone.app`.
+Xcode's per-user relative DerivedData setting from S03 can append `LocalTranslator/`, yielding `.build/DerivedData/LocalTranslator/Build/Products/Debug/Undertone.app`. That UI setting is ignored by Git; the CLI command above is the reproducible baseline.
 
 If the execution sandbox blocks Xcode cache/log access, request permission to rerun outside the sandbox; do not change global Xcode paths or signing to work around it.
 

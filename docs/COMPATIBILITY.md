@@ -54,7 +54,7 @@ Wording for the non-PLAN rows is an assumption (low-impact detail, runbook rule 
 | Google Chrome 153.0.8010.53, default settings, with S12b auto-activation | `AXUIElementSetAttributeValue(app, AXManualAccessibility, true)` → -25205 attributeUnsupported; every later ⌥T still `noFocusedElement` | FAIL (S12b, user): Chrome does not build its tree from this attribute |
 | Password fields / secure input | Never read | PASS (S10, user) |
 | VS Code 1.139.1 (Electron) | `AXManualAccessibility` activation (S12b) | PASS text (S12b, user, after relaunching Local Translator) |
-| Safari | Reported not working in S12 checks (details not given) | FAIL (S12, user); low priority per user |
+| Safari | Reported not working in S12 checks (details not given). 0.2.0 (L08) reads a focused element owned by a helper process of the source app (such as a web content process) instead of treating it as another app — a likely cause | FAIL (S12, user); NOT RUN again after L08; low priority per user |
 | Google Chrome with S12c `AXEnhancedUserInterface` fallback | Text read after the tree is built; anchor = cursor (no usable range bounds) | PASS text (S12c, user); ~30 s from first ⌥T until capture works — warm-up once per Chrome launch |
 | Slack, Notion (Electron) | `AXManualAccessibility` (S12b) | PASS text (user, after S12): first ⌥T triggers activation, works after ~10 s |
 | Brave (Chromium) | `AXEnhancedUserInterface` fallback (S12c) | PASS text (user, after S12): same ~10 s warm-up |
@@ -83,3 +83,6 @@ The button appears only where ⌥T can read the selection, because it uses the s
 
 Per-app summary PASS for TextEdit, Notes, Mail, Preview (text PDF), Chrome, Brave, Slack, Notion, VS Code, Outlook 16.113.2, Word 16.113.2 (user summary, not itemised); Safari not re-tested (S12 FAIL); Pages and Acrobat not installed → NOT RUN. Details and timings: `QA-REPORT.md`.
 
+## Live meeting sources (Feature 2, L07)
+
+Teams app: PASS. Google Meet/any page in Chrome: PASS (all Chrome tabs are captured; re-checked at L08 on the final capture code). Slack huddles: NOT RUN. Other apps: not supported. Details: `LIVE-QA.md`.

@@ -1,7 +1,7 @@
 import CoreGraphics
 import SwiftUI
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 private let visible = CGRect(x: 0, y: 0, width: 1440, height: 875)
 private let size = CGSize(width: 300, height: 120)
@@ -96,13 +96,13 @@ private final class FakePopupWindow: PopupWindowing {
     var onCancel: (() -> Void)?
     var onUserMoved: ((CGRect, CGRect) -> Void)?
     var fitting = CGSize(width: 300, height: 120)
-    private(set) var presented: [(frame: CGRect, makeKey: Bool)] = []
+    private(set) var presented: [(frame: CGRect, raise: Bool, makeKey: Bool)] = []
     private(set) var dismissCount = 0
 
     func fittingSize(for view: AnyView) -> CGSize { fitting }
 
-    func present(_ view: AnyView, frame: CGRect, makeKey: Bool) {
-        presented.append((frame, makeKey))
+    func present(_ view: AnyView, frame: CGRect, raise: Bool, makeKey: Bool) {
+        presented.append((frame, raise, makeKey))
     }
 
     func dismiss() { dismissCount += 1 }
@@ -199,6 +199,28 @@ struct TranslationPanelControllerTests {
         #expect(!controller.isVisible)
     }
 
+    @Test func aNewRequestComesToTheFrontAndItsStreamingRendersDoNot() {
+        let (controller, window, _, _) = make()
+        var first = content
+        first.session = UUID()
+        controller.show(first, at: selection)
+        controller.show(first, at: selection)
+        var second = content
+        second.session = UUID()
+        controller.show(second, at: selection)
+        #expect(window.presented.map(\.raise) == [true, false, true])
+        #expect(window.presented.allSatisfy { !$0.makeKey })
+    }
+
+    @Test func withoutTheEscKeyOnlyANewPresentationTakesFocus() {
+        let (controller, window, _, _) = make(escapeFailure: .conflict)
+        var request = content
+        request.session = UUID()
+        controller.show(request, at: selection)
+        controller.show(request, at: selection)
+        #expect(window.presented.map(\.makeKey) == [true, false])
+    }
+
     @Test func escConflictFallsBackToKeyPanel() {
         let (controller, window, escape, _) = make(escapeFailure: .conflict)
         controller.show(content, at: selection)
@@ -283,7 +305,7 @@ private final class FakeWindowForDismiss: PopupWindowing {
     var onCancel: (() -> Void)?
     var onUserMoved: ((CGRect, CGRect) -> Void)?
     func fittingSize(for view: AnyView) -> CGSize { CGSize(width: 300, height: 100) }
-    func present(_ view: AnyView, frame: CGRect, makeKey: Bool) {}
+    func present(_ view: AnyView, frame: CGRect, raise: Bool, makeKey: Bool) {}
     func dismiss() {}
 }
 

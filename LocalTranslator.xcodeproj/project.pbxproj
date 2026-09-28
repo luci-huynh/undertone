@@ -18,7 +18,7 @@
 
 /* Begin PBXFileReference section */
 		AA0600000000000000000001 /* LocalTranslatorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = LocalTranslatorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		EA9331DF30692880000CFEBC /* LocalTranslator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LocalTranslator.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EA9331DF30692880000CFEBC /* Undertone.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Undertone.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -60,7 +60,7 @@
 		EA9331E030692880000CFEBC /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				EA9331DF30692880000CFEBC /* LocalTranslator.app */,
+				EA9331DF30692880000CFEBC /* Undertone.app */,
 				AA0600000000000000000001 /* LocalTranslatorTests.xctest */,
 			);
 			name = Products;
@@ -105,7 +105,7 @@
 			);
 			name = LocalTranslator;
 			productName = LocalTranslator;
-			productReference = EA9331DF30692880000CFEBC /* LocalTranslator.app */;
+			productReference = EA9331DF30692880000CFEBC /* Undertone.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -190,10 +190,10 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = local.chienhuynh.LocalTranslatorTests;
+				PRODUCT_BUNDLE_IDENTIFIER = local.chienhuynh.UndertoneTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LocalTranslator.app/Contents/MacOS/LocalTranslator";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Undertone.app/Contents/MacOS/Undertone";
 			};
 			name = Debug;
 		};
@@ -209,10 +209,10 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = local.chienhuynh.LocalTranslatorTests;
+				PRODUCT_BUNDLE_IDENTIFIER = local.chienhuynh.UndertoneTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LocalTranslator.app/Contents/MacOS/LocalTranslator";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Undertone.app/Contents/MacOS/Undertone";
 			};
 			name = Release;
 		};
@@ -341,20 +341,23 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 6T9Y4G54XN;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Undertone-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Undertone;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = local.chienhuynh.LocalTranslator;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				MARKETING_VERSION = 0.3.0;
+				PRODUCT_BUNDLE_IDENTIFIER = local.chienhuynh.Undertone;
+				PRODUCT_MODULE_NAME = Undertone;
+				PRODUCT_NAME = Undertone;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -372,21 +375,24 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 6T9Y4G54XN;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Undertone-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Undertone;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = local.chienhuynh.LocalTranslator;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				MARKETING_VERSION = 0.3.0;
+				PRODUCT_BUNDLE_IDENTIFIER = local.chienhuynh.Undertone;
+				PRODUCT_MODULE_NAME = Undertone;
+				PRODUCT_NAME = Undertone;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

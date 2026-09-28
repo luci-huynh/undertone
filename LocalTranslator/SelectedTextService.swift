@@ -10,6 +10,14 @@ protocol SelectionEnvironment {
     /// Cursor position in AppKit global coordinates.
     func mouseLocation() -> CGPoint
     func screenLayout() -> ScreenLayout
+    /// An ordinary app (Dock presence), as opposed to a helper process.
+    func isRegularApp(pid: pid_t) -> Bool
+}
+
+extension SelectionEnvironment {
+    func isRegularApp(pid: pid_t) -> Bool {
+        NSRunningApplication(processIdentifier: pid)?.activationPolicy == .regular
+    }
 }
 
 protocol FocusedElementQuerying: Sendable {
@@ -95,12 +103,17 @@ nonisolated struct AXFocusedElementQuery: FocusedElementQuerying {
             reading.elementPID = elementPID
         }
 
-        // Check before touching any text so secure fields are never read.
+        // Check before touching any text so secure fields are never read. If
+        // the app cannot answer in time, no text is read either (fail closed).
         try cancellation.check()
         let subrole = stringAttribute(kAXSubroleAttribute, of: element)
         try cancellation.check()
         let role = stringAttribute(kAXRoleAttribute, of: element)
-        if subrole == kAXSecureTextFieldSubrole || role == "AXSecureTextField" {
+        if subrole.timedOut || role.timedOut {
+            reading.failure = .timedOut
+            return reading
+        }
+        if subrole.value == kAXSecureTextFieldSubrole || role.value == "AXSecureTextField" {
             reading.isSecureTextField = true
             return reading
         }
@@ -133,8 +146,9 @@ nonisolated struct AXFocusedElementQuery: FocusedElementQuerying {
                 try cancellation.check()
                 var value: CFTypeRef?
                 let error = AXUIElementCopyAttributeValue(app, kAXFocusedUIElementAttribute as CFString, &value)
-                guard error == .success, let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return false }
-                return CFEqual(element, value)
+                guard error == .success else { return .failed(error) }
+                guard let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return .value(false) }
+                return .value(CFEqual(element, value))
             }
         )
     }
@@ -147,10 +161,11 @@ nonisolated struct AXFocusedElementQuery: FocusedElementQuerying {
         return .found(value as! AXUIElement)
     }
 
-    private static func stringAttribute(_ attribute: String, of element: AXUIElement) -> String? {
+    private static func stringAttribute(_ attribute: String, of element: AXUIElement) -> (value: String?, timedOut: Bool) {
         var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { return nil }
-        return value as? String
+        let error = AXUIElementCopyAttributeValue(element, attribute as CFString, &value)
+        guard error == .success else { return (nil, error == .cannotComplete) }
+        return (value as? String, false)
     }
 }
 
@@ -194,7 +209,8 @@ final class SelectedTextService: SelectionCapturing {
                 mouseLocation: mouseLocation,
                 layout: layout
             ),
-            capturedAt: capturedAt
+            capturedAt: capturedAt,
+            isRegularApp: environment.isRegularApp(pid:)
         )
     }
 }

@@ -85,4 +85,16 @@ S01–S31 và các mapping Feature 1 ở trên được giữ nguyên. “Stream
 | §24.3 | Feature 1 hoàn tất trước; không hồi quy ⌥T/popup/settings; cancellation độc lập | Gate S31→L01; regression mỗi bước dùng chung code; L06/L07/L08 |
 | §24.4–§24.5 | Đo latency/backlog/CPU/RAM, phiên ≥30 phút, offline và riêng tư | Ngưỡng L01, xác nhận đo ASR L03, QA L07, nghiệm thu L08 |
 
-L01–L08 đều NOT RUN và chưa được cấp phép triển khai. Chỉ việc cập nhật tài liệu DOC01 được người dùng yêu cầu; không thay thế xác nhận bước kế tiếp của Feature 1.
+Trạng thái (cập nhật L08, 2026-09-28): L01–L07 PASS; L08 đã bàn giao bản 0.2.0 (2), chờ người dùng nghiệm thu Feature 2 — xem `PROGRESS.md` và `RELEASE-CHECKLIST.md`. (Ghi chú lúc DOC01: L01–L08 khi đó đều NOT RUN và chưa được cấp phép.)
+
+### L01 — bổ sung mapping chi tiết (2026-09-28, sau nghiệm thu Feature 1)
+
+| PLAN | Yêu cầu | Đề xuất L01 (`docs/LIVE-DESIGN.md`) | Kiểm chứng |
+|---|---|---|---|
+| §24.1 nguồn | Chỉ app/trình duyệt được chọn, không mic | Core Audio process tap theo tiến trình + helper; trình duyệt = mọi tab | L02 với từng app đã chọn |
+| §24.1 local | ASR + dịch offline | Apple SpeechAnalyzer (macOS 26+) + Ollama translategemma | L03 (ASR), L04 (dịch), L07 offline |
+| §24.1 lưu trữ | Không lưu audio/transcript; buffer có giới hạn | Ring buffer ≤ 30 s, ≤ 30 cặp đoạn trong RAM, log metadata | L07 audit |
+| §24.2 hiển thị | EN trên, VI dưới, không đợi dịch, ghép đúng đoạn | volatile → final segment id; bản dịch gắn cùng id/phiên | L03–L05 |
+| §24.2 backlog | Không hàng đợi vô hạn | ≤ 3 đoạn chờ, gộp khi tràn, bỏ đoạn cũ > 30 s | L04/L07 |
+| §24.3 | Không hồi quy Feature 1 | Phiên/cửa sổ/hàng đợi riêng; text ưu tiên khi cùng dùng Ollama | L06 + regression mỗi bước |
+| §24.4 | macOS tối thiểu, quyền, latency | Live chỉ macOS 26+, app giữ 14.0; quyền “System Audio Recording Only”; ngưỡng đề xuất §5 | Người dùng duyệt trước L02 |

@@ -25,10 +25,15 @@ nonisolated enum LanguageRouter {
     static let otherLanguageThreshold = 0.8
     /// Fewer letters than this is never decided (“OK”, “Hi”).
     static let minimumLetters = 3
+    /// Detection reads at most this much (it runs on the main actor, before
+    /// the size limit is checked): the language of a selection shows in its
+    /// start, and select-all in a long document stays instant (L08 review).
+    static let maxDetectionCharacters = 2_000
 
     static func detect(_ text: String) -> LanguageDetection {
         // Some apps hand over decomposed (NFD) text; tone marks must still match.
-        let words = strippedForDetection(text.precomposedStringWithCanonicalMapping)
+        let sample = String(text.prefix(maxDetectionCharacters))
+        let words = strippedForDetection(sample.precomposedStringWithCanonicalMapping)
         let letters = words.unicodeScalars.filter { CharacterSet.letters.contains($0) }.count
         guard letters > 0 else { return .notText }
         let guess = bestGuess(words)
@@ -53,9 +58,11 @@ nonisolated enum LanguageRouter {
 
     /// Removes parts that carry no language: URLs (also scheme-less ones as
     /// chat apps show them, “app.example.com/p/…”), e-mail addresses, digits.
+    /// Every pattern is linear: the former e-mail pattern `\S+@\S+\.\S+`
+    /// backtracked, 8 s for 1,500 characters without spaces (L08 review).
     static func strippedForDetection(_ text: String) -> String {
         var result = text
-        for pattern in [#"(?i)\b(?:https?://|www\.)\S+"#, #"\S+@\S+\.\S+"#, schemelessLinkPattern, #"[0-9]+"#] {
+        for pattern in [#"(?i)\b(?:https?://|www\.)\S+"#, #"(?<!\S)[^\s@]+@[^\s@]+\.\S+"#, schemelessLinkPattern, #"[0-9]+"#] {
             result = result.replacingOccurrences(of: pattern, with: " ", options: .regularExpression)
         }
         return result

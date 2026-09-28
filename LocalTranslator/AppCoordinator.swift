@@ -9,6 +9,8 @@ final class AppCoordinator {
     let flow: TranslationCoordinator
     let selectionTrigger: SelectionTriggerService
     let launchAtLogin: LaunchAtLoginService
+    /// Feature 2 (PLAN §24): separate session; ⌥T and the popup never touch it.
+    let live: LiveSession
 
     init(
         readiness: OllamaReadinessService,
@@ -16,7 +18,8 @@ final class AppCoordinator {
         shortcut: GlobalShortcutService,
         flow: TranslationCoordinator,
         selectionTrigger: SelectionTriggerService,
-        launchAtLogin: LaunchAtLoginService
+        launchAtLogin: LaunchAtLoginService,
+        live: LiveSession
     ) {
         self.readiness = readiness
         self.permission = permission
@@ -24,6 +27,7 @@ final class AppCoordinator {
         self.flow = flow
         self.selectionTrigger = selectionTrigger
         self.launchAtLogin = launchAtLogin
+        self.live = live
         flow.onOpenAccessibilitySettings = { [permission] in permission.openSystemSettings() }
     }
 
@@ -43,6 +47,7 @@ final class AppCoordinator {
     }
 
     func shutdown() {
+        live.stop()
         selectionTrigger.stop()
         shortcut.stop()
         readiness.stop()

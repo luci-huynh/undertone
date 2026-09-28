@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 /// Prompt structure and context budget (runbook S22). Translation quality is
 /// judged by hand from the live evaluation, never by exact strings here.

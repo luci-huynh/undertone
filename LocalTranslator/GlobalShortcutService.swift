@@ -141,13 +141,23 @@ enum ShortcutStatus: Equatable {
         case .failed(let code): "Lỗi đăng ký (\(code))"
         }
     }
+
+    /// The menu is English (PLAN F07); Settings uses `label`.
+    var menuLabel: String {
+        switch self {
+        case .inactive: "not active"
+        case .registered: "active"
+        case .conflict: "used by another app"
+        case .failed(let code): "couldn't register (\(code))"
+        }
+    }
 }
 
 @Observable
 final class GlobalShortcutService {
     let combination: HotKeyCombination
     private let registrar: any HotKeyRegistering
-    @ObservationIgnored private let logger = Logger(subsystem: "local.chienhuynh.LocalTranslator", category: "shortcut")
+    @ObservationIgnored private let logger = Logger(subsystem: "local.chienhuynh.Undertone", category: "shortcut")
 
     private(set) var status: ShortcutStatus = .inactive
     /// Presses this launch; each press also calls `onTrigger`.

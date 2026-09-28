@@ -1,6 +1,6 @@
 import Foundation
 import ServiceManagement
-@testable import LocalTranslator
+@testable import Undertone
 
 /// Mirrors the real API: a prompt returns the current trust immediately;
 /// a grant only happens later, when the user toggles System Settings.
@@ -206,7 +206,8 @@ extension AppCoordinator {
         shortcut: GlobalShortcutService? = nil,
         flow: TranslationCoordinator? = nil,
         readiness: OllamaReadinessService? = nil,
-        selectionTrigger: SelectionTriggerService? = nil
+        selectionTrigger: SelectionTriggerService? = nil,
+        live: LiveSession? = nil
     ) -> AppCoordinator {
         AppCoordinator(
             readiness: readiness ?? OllamaReadinessService(settings: MemoryModelSettings(), transport: MockTransport.refusing()),
@@ -214,7 +215,8 @@ extension AppCoordinator {
             shortcut: shortcut ?? .fake(),
             flow: flow ?? .fake(),
             selectionTrigger: selectionTrigger ?? .fake(),
-            launchAtLogin: LaunchAtLoginService(item: FakeLoginItem())
+            launchAtLogin: LaunchAtLoginService(item: FakeLoginItem()),
+            live: live ?? .fake()
         )
     }
 }
@@ -391,4 +393,147 @@ final class FakeLoginItem: LoginItemControlling {
     }
 
     func openSystemSettings() { openedSettings += 1 }
+}
+
+// MARK: - Live (Feature 2)
+
+final class FakeLiveCapture: LiveAudioCapturing {
+    private(set) var startCount = 0
+    private(set) var stopCount = 0
+    private(set) var bundleIDs: [String] = []
+    private(set) var sink: (any LiveAudioSink)?
+    private var onLevel: (@MainActor (LiveAudioLevel) -> Void)?
+    var failure: LiveCaptureError?
+    var isCapturing: Bool { onLevel != nil }
+
+    func start(bundleIDs: [String], into sink: any LiveAudioSink, onLevel: @escaping @MainActor (LiveAudioLevel) -> Void) throws {
+        startCount += 1
+        if let failure { throw failure }
+        self.bundleIDs = bundleIDs
+        self.sink = sink
+        self.onLevel = onLevel
+    }
+
+    func stop() {
+        stopCount += 1
+        onLevel = nil
+    }
+
+    /// Simulates audio from the tapped processes.
+    @MainActor
+    func emit(rms: Float, samples: [Float] = [0.1, -0.1]) {
+        sink?.append(samples, sampleRate: 48_000)
+        onLevel?(LiveAudioLevel(rms: rms))
+    }
+}
+
+/// Recognizer the test drives by hand.
+final class FakeTranscriber: LiveTranscribing {
+    var prepareFailure: LiveTranscriberError?
+    var progressSteps: [Double] = []
+    /// When set, prepare() waits until `releasePrepare()` (model download in progress).
+    var holdsPrepare = false
+    private var prepareGate: CheckedContinuation<Void, Never>?
+    func releasePrepare() {
+        prepareGate?.resume()
+        prepareGate = nil
+    }
+    private(set) var prepareCount = 0
+    private(set) var startCount = 0
+    private(set) var stopCount = 0
+    private(set) var finalizeCount = 0
+    private(set) var received: [[Float]] = []
+    private var continuation: AsyncThrowingStream<LiveTranscriptEvent, Error>.Continuation?
+
+    private final class Sink: LiveAudioSink, @unchecked Sendable {
+        let owner: FakeTranscriber
+        init(_ owner: FakeTranscriber) { self.owner = owner }
+        func append(_ samples: [Float], sampleRate: Double) {
+            MainActor.assumeIsolated { owner.received.append(samples) }
+        }
+    }
+
+    func prepare(progress: @escaping @MainActor (Double) -> Void) async throws {
+        prepareCount += 1
+        for step in progressSteps { progress(step) }
+        if holdsPrepare { await withCheckedContinuation { prepareGate = $0 } }
+        if let prepareFailure { throw prepareFailure }
+    }
+
+    func start() async throws -> (sink: any LiveAudioSink, events: AsyncThrowingStream<LiveTranscriptEvent, Error>) {
+        startCount += 1
+        let (stream, continuation) = AsyncThrowingStream<LiveTranscriptEvent, Error>.makeStream()
+        self.continuation = continuation
+        return (Sink(self), stream)
+    }
+
+    /// When set, finalizeNow() waits until `releaseFinalize()`.
+    var holdsFinalize = false
+    private var finalizeGate: CheckedContinuation<Void, Never>?
+    func releaseFinalize() {
+        finalizeGate?.resume()
+        finalizeGate = nil
+    }
+
+    func finalizeNow() async {
+        finalizeCount += 1
+        if holdsFinalize { await withCheckedContinuation { finalizeGate = $0 } }
+    }
+
+    func stop() async {
+        stopCount += 1
+        continuation?.finish()
+    }
+
+    func send(_ event: LiveTranscriptEvent) { continuation?.yield(event) }
+    /// The recognizer ends on its own (nil: finished, else failed).
+    func end(throwing error: Error? = nil) {
+        if let error { continuation?.finish(throwing: error) } else { continuation?.finish() }
+    }
+}
+
+final class FakeSystemEvents: LiveSystemEventSource {
+    private var handler: ((LiveSystemEvent) -> Void)?
+    var isListening: Bool { handler != nil }
+    func start(_ handler: @escaping (LiveSystemEvent) -> Void) { self.handler = handler }
+    func stop() { handler = nil }
+    func send(_ event: LiveSystemEvent) { handler?(event) }
+}
+
+final class FakeProcessList: LiveProcessListing {
+    var processes: [LiveAudioProcess]
+    init(_ processes: [LiveAudioProcess] = []) { self.processes = processes }
+    func audioProcesses() -> [LiveAudioProcess] { processes }
+}
+
+final class MemoryLiveSettings: LiveSettingsStoring {
+    var source: LiveSource = .teams
+    var keepsWindowOnTop = true
+}
+
+/// Manual clock for Live status timing.
+final class ManualClock {
+    private(set) var now = ContinuousClock.now
+    func advance(_ duration: Duration) { now += duration }
+}
+
+@MainActor
+extension LiveSession {
+    static func fake(
+        capture: FakeLiveCapture? = nil,
+        transcriber: FakeTranscriber? = nil,
+        translations: LiveTranslationQueue? = nil,
+        processes: FakeProcessList? = nil,
+        systemEvents: FakeSystemEvents? = nil,
+        clock: ManualClock = ManualClock(),
+        makeTranscriber: (() -> FakeTranscriber)? = nil
+    ) -> LiveSession {
+        let recognizer = transcriber ?? FakeTranscriber()
+        return LiveSession(
+            capture: capture ?? FakeLiveCapture(), transcriber: makeTranscriber ?? { recognizer },
+            translations: translations ?? LiveTranslationQueue(translate: { _ in AsyncThrowingStream { $0.finish() } }, isTextBusy: { false }),
+            processes: processes ?? FakeProcessList(), systemEvents: systemEvents ?? FakeSystemEvents(), settings: MemoryLiveSettings(),
+            statusInterval: .seconds(3600), blockedAfter: .seconds(4), now: { clock.now }
+        )
+    }
 }

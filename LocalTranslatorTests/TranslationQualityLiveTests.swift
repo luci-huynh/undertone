@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 /// Synthetic fixture (Fixtures/TranslationCases.json). Checks are invariants
 /// only — direction, language, kept names/numbers, line structure, no

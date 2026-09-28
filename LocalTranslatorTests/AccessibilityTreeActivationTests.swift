@@ -1,6 +1,6 @@
 import ApplicationServices
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 struct AccessibilityTreeActivationTests {
     private final class Script {

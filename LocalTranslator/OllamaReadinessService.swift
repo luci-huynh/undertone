@@ -9,6 +9,9 @@ enum RuntimeStatus: Equatable {
     case notRunning
     /// Something answered but not with Ollama's API.
     case invalidResponse
+    /// Ollama didn't answer the check in time (busy or starting; L08 review:
+    /// a timeout is not “unexpected response”).
+    case notResponding
     /// Configured endpoint is not loopback; nothing was sent.
     case endpointRejected
 
@@ -19,6 +22,7 @@ enum RuntimeStatus: Equatable {
         case .connected: "Connected"
         case .notRunning: "Not running"
         case .invalidResponse: "Unexpected response"
+        case .notResponding: "Not responding"
         case .endpointRejected: "Endpoint not local"
         }
     }
@@ -49,7 +53,7 @@ final class OllamaReadinessService {
     @ObservationIgnored private let pollInterval: Duration
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     @ObservationIgnored private var isRefreshing = false
-    @ObservationIgnored private let logger = Logger(subsystem: "local.chienhuynh.LocalTranslator", category: "ollama")
+    @ObservationIgnored private let logger = Logger(subsystem: "local.chienhuynh.Undertone", category: "ollama")
 
     init(settings: any ModelSettingsStoring, transport: any HTTPTransport, pollInterval: Duration = .seconds(20)) {
         self.settings = settings
@@ -110,6 +114,10 @@ final class OllamaReadinessService {
             updateModelStatus()
         } catch OllamaError.runtimeUnavailable {
             runtime = .notRunning
+            model = .unknown
+            installedLocalModels = []
+        } catch OllamaError.streamStalled {
+            runtime = .notResponding
             model = .unknown
             installedLocalModels = []
         } catch is CancellationError {

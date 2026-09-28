@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 /// Failure injection for S23: every error maps to one short message and a
 /// recovery; timeouts are separated; cancellation is never an error.
@@ -37,6 +37,13 @@ struct TranslationErrorTests {
         #expect(!TranslationError.notLocal.allowsRetry)
         #expect(TranslationError.coldStartTimeout.allowsRetry && TranslationError.stalled.allowsRetry)
         #expect(TranslationError.coldStartTimeout.message != TranslationError.stalled.message)
+    }
+
+    @Test func aRequestOllamaRejectedOffersNoRetry() {
+        #expect(!TranslationError(OllamaError.http(status: 400, message: "\"nomic-embed-text\" does not support chat")).allowsRetry)
+        #expect(TranslationError(OllamaError.http(status: 400, message: "bad")).message == "Ollama: bad")
+        #expect(TranslationError(OllamaError.http(status: 500, message: nil)).allowsRetry)
+        #expect(TranslationError(OllamaError.http(status: 429, message: nil)).allowsRetry)
     }
 
     @Test func ollamaMessageIsShortSingleLineAndNeverLogged() {
@@ -111,6 +118,31 @@ struct StreamWatchdogTests {
         await producer.value
         #expect(result.output.count == 8)
         #expect(result.error == nil)
+    }
+
+    @Test func firstTokenShortensDeadlineAndTimeoutNeverCompletesSuccessfully() async {
+        // Repeat the cancellation race; the first deadline is intentionally
+        // much longer than the stall deadline, unlike the older timing tests.
+        for _ in 0..<5 {
+            let (upstream, continuation) = AsyncThrowingStream<String, Error>.makeStream()
+            let log = TerminationLog()
+            continuation.onTermination = { termination in
+                if case .cancelled = termination { log.append(1) }
+            }
+            let start = ContinuousClock.now
+            let watched = StreamWatchdog.watch(upstream, first: .seconds(2), between: .milliseconds(80))
+            let producer = Task {
+                try? await Task.sleep(for: .milliseconds(50))
+                continuation.yield("partial")
+            }
+            let result = await collect(watched)
+            await producer.value
+            #expect(result.output == ["partial"])
+            #expect(result.error as? OllamaError == .streamStalled)
+            #expect(ContinuousClock.now - start < .seconds(1))
+            for _ in 0..<200 where log.values.isEmpty { await Task.yield() }
+            #expect(log.values == [1])
+        }
     }
 
     @Test func upstreamErrorsPassThrough() async {

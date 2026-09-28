@@ -1,5 +1,7 @@
 # Privacy review — S28
 
+0.3.0 (4): renamed to Undertone — bundle ID `local.chienhuynh.Undertone`, log subsystem `local.chienhuynh.Undertone`; entries below keep their historical names.
+
 PLAN F08: selected text goes only to localhost → Ollama; no OpenAI, Google Translate, analytics or external logging; no translation history; debug logs metadata only.
 
 ## Data flow
@@ -46,3 +48,7 @@ All 16 `Logger` calls use subsystem `local.chienhuynh.LocalTranslator` and log o
 ## Not verified
 
 - Behaviour under a future macOS or Ollama version.
+
+## Live meeting translation (Feature 2, L07 audit)
+
+Audio of the chosen meeting app only (Core Audio process tap, “System Audio Recording Only”), never the microphone (no usage string; refused by Hardened Runtime policy). Speech recognition on this Mac (Apple SpeechTranscriber, no Speech Recognition permission); translation through the same loopback-only Ollama client. RAM only: ≤ 30 s audio, ≤ 50 subtitle segments with translations, cleared on Stop/close/quit; no files; logs metadata only. Details: `LIVE-QA.md`.

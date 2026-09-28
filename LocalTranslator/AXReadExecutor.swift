@@ -16,7 +16,7 @@ nonisolated final class AXReadCancellation: @unchecked Sendable {
 nonisolated final class AXReadExecutor: Sendable {
     private let queue: DispatchQueue
 
-    init(queue: DispatchQueue = DispatchQueue(label: "local.chienhuynh.LocalTranslator.ax", qos: .userInitiated)) {
+    init(queue: DispatchQueue = DispatchQueue(label: "local.chienhuynh.Undertone.ax", qos: .userInitiated)) {
         self.queue = queue
     }
 

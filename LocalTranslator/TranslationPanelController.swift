@@ -10,8 +10,10 @@ protocol PopupWindowing: AnyObject {
     /// The user dragged the panel: its new frame and that screen's visible frame.
     var onUserMoved: ((CGRect, CGRect) -> Void)? { get set }
     func fittingSize(for view: AnyView) -> CGSize
-    /// `makeKey` is used only when the global Esc key is unavailable.
-    func present(_ view: AnyView, frame: CGRect, makeKey: Bool)
+    /// `raise`: a new presentation (not a streaming render) comes to the
+    /// front. `makeKey`: take keyboard focus, only for a new presentation and
+    /// only when the global Esc key is unavailable.
+    func present(_ view: AnyView, frame: CGRect, raise: Bool, makeKey: Bool)
     func dismiss()
 }
 
@@ -33,7 +35,7 @@ final class TranslationPanelController: PopupPresenting {
     private let window: any PopupWindowing
     private let escape: any HotKeyRegistering
     private let copyToPasteboard: (String) -> Void
-    private let logger = Logger(subsystem: "local.chienhuynh.LocalTranslator", category: "popup")
+    private let logger = Logger(subsystem: "local.chienhuynh.Undertone", category: "popup")
 
     var onDismiss: (() -> Void)?
     var onAction: ((PopupContent.Action) -> Void)?
@@ -84,6 +86,10 @@ final class TranslationPanelController: PopupPresenting {
 
     /// Shows or replaces the popup at `anchor`.
     func show(_ content: PopupContent, at anchor: SelectionAnchor) {
+        // A new request or notice comes to the front (the Live window floats at
+        // the same level); renders of the running request leave window order
+        // and keyboard focus alone (L08 review).
+        let raise = !isVisible || content.session == nil || content.session != self.content?.session
         if !isVisible { registerEscape() }
         generation += 1
         self.content = content
@@ -119,7 +125,7 @@ final class TranslationPanelController: PopupPresenting {
         }
         let frame = moved.map { PopupPositioner.frame(for: size, keepingTopLeft: $0.topLeft, in: $0.visibleFrame) }
             ?? PopupPositioner.frame(for: size, anchor: anchor)
-        window.present(view, frame: frame, makeKey: !escapeRegistered)
+        window.present(view, frame: frame, raise: raise, makeKey: raise && !escapeRegistered)
         self.frame = frame
         isVisible = true
     }
@@ -208,7 +214,7 @@ final class PopupPanelWindow: PopupWindowing {
         NSHostingController(rootView: view).sizeThatFits(in: CGSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude))
     }
 
-    func present(_ view: AnyView, frame: CGRect, makeKey: Bool) {
+    func present(_ view: AnyView, frame: CGRect, raise: Bool, makeKey: Bool) {
         hostingView.rootView = view
         // Streaming updates usually keep the frame; avoid window work then.
         if panel.frame != frame {
@@ -219,8 +225,8 @@ final class PopupPanelWindow: PopupWindowing {
         }
         if makeKey {
             // Keyboard focus only; a non-activating panel does not activate the app.
-            if !panel.isKeyWindow { panel.makeKeyAndOrderFront(nil) }
-        } else if !panel.isVisible {
+            panel.makeKeyAndOrderFront(nil)
+        } else if raise || !panel.isVisible {
             panel.orderFrontRegardless()
         }
     }

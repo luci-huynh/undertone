@@ -1,5 +1,9 @@
 # Release configuration — S28
 
+## Undertone rename — 2026-09-28
+
+New builds produce `Undertone.app`. Project/scheme/module, bundle ID, settings keys and signing stay unchanged. Existing LocalTranslator archives and installed copies are not renamed by a source build. For a later installation, quit the old app, keep a rollback copy and install Undertone as the only running copy. Recheck Accessibility, System Audio Recording Only and Launch at Login; the login item may need toggling off/on after the path changes. Earlier release records below describe their original artifacts.
+
 ## Current build (inspected 2026-09-28)
 
 | Item | Value |
@@ -33,7 +37,7 @@ Recommendation: **A**, with one minimal change: turn on **Hardened Runtime** for
 Build from source on that Mac (recommended):
 
 1. Install Xcode 27 or later and Ollama; run `ollama pull translategemma:12b` (8.1 GB) — the app never downloads models.
-2. Get the source: copy the folder, or `git clone` once the work is committed and pushed (today only the S01–S07 checkpoint is committed; everything after it is uncommitted, and the last push attempt was refused for the signed-in GitHub account).
+2. Get the source: copy the folder, or `git clone` the pushed repository. Feature 1 (commit `3b3290d`) is pushed to `luci/main`; Feature 2 (L01–L08) is not committed yet, so for 0.2.0 copy the folder until it is committed and pushed.
 3. Open `LocalTranslator.xcodeproj` → target LocalTranslator → Signing & Capabilities → Team: the same Apple ID works as is (Xcode creates a development certificate for that Mac). With a different Apple ID, pick its Personal Team and, if Xcode reports the bundle ID is taken, change `PRODUCT_BUNDLE_IDENTIFIER` to a unique one.
 4. Build Release (commands in `BUILD.md`) or Product → Archive, copy `LocalTranslator.app` to `/Applications`, open it, grant Accessibility when asked, optionally turn on Launch at Login.
 
@@ -62,3 +66,23 @@ Quit the app and delete `/Applications/LocalTranslator.app`; the previous Releas
 
 `codesign --verify --deep --strict`: valid. `spctl --assess --type execute`: rejected (not notarized; expected). No stapled ticket. Signing identities: Apple Development only. Not distribution-ready; personal use only.
 
+## Release 0.2.0 (2) — L08
+
+- Version (user, L08: “0.2.0 đi”): `MARKETING_VERSION 0.2.0`, `CURRENT_PROJECT_VERSION 2` in both app configurations.
+- Same route A signing: Apple Development, Personal Team `6T9Y4G54XN`, Hardened Runtime, no entitlements. New since 0.1.0: `Config/LocalTranslator-Info.plist` adds `NSAudioCaptureUsageDescription` (Live's System Audio Recording Only permission, asked at the first Start); there is no microphone usage string.
+- Artifact: `.build/LocalTranslator-0.2.0-2.xcarchive` and `.build/release/LocalTranslator-0.2.0-2.zip` (SHA-256 in `.build/release/SHA256SUMS`); the 0.1.0 archive and zip are unchanged.
+- Installed to `/Applications/LocalTranslator.app` with the user's approval (L08: “2. Có”); the 0.1.0 copy was moved, not deleted.
+- Live on another Mac needs macOS 26 or later; macOS may download its English speech model once at the first Start; grant System Audio Recording Only there. Text translation does not need either.
+- Checklist and evidence: `RELEASE-CHECKLIST.md` (0.2.0 section). Not uploaded, notarized, tagged, pushed or published.
+
+## Release 0.2.1 (3) — L08 follow-up
+
+- User: “Build bản mới, cài vào Applications, bỏ bản 0.1.0”. Version 0.2.1 (3); the name stays “Local Translator” (no new name chosen yet).
+- Same signing and settings as 0.2.0. Artifact `.build/LocalTranslator-0.2.1-3.xcarchive`, `.build/release/LocalTranslator-0.2.1-3.zip`; installed to `/Applications`.
+- 0.1.0 artifacts deleted; 0.2.0 kept for rollback. Details: `RELEASE-CHECKLIST.md`.
+
+## Release 0.3.0 (4) — Undertone
+
+- User: rename everything to Undertone including the bundle ID; “Version mới, và gỡ toàn bộ app tên cũ, install lại app mới”.
+- Bundle ID `local.chienhuynh.Undertone` (tests `local.chienhuynh.UndertoneTests`), module `Undertone`, `Config/Undertone-Info.plist`. Same signing. The project, target, scheme and source folders keep the internal name `LocalTranslator`, so the build commands are unchanged except the archive path.
+- A new bundle ID is a new app for macOS (permissions, login item). Details and rollback: `RELEASE-CHECKLIST.md`, README.

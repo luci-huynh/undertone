@@ -36,7 +36,7 @@ nonisolated enum SelectionFailure: Error, Equatable, Sendable {
         switch self {
         case .permissionMissing: "Chưa cấp quyền Accessibility"
         case .noFrontmostApp: "Không xác định được app đang dùng"
-        case .sourceIsSelf: "Đang ở chính Local Translator"
+        case .sourceIsSelf: "Đang ở chính Undertone"
         case .secureInput: "Ô nhập bảo mật, không đọc"
         case .noFocusedElement: "Không có thành phần đang focus"
         case .unsupported: "App không hỗ trợ đọc vùng chọn"
@@ -75,18 +75,24 @@ nonisolated struct FocusedElementReading: Equatable, Sendable {
 }
 
 nonisolated enum SelectionClassifier {
+    /// - Parameter isRegularApp: whether a pid is an ordinary app (Dock
+    ///   presence). The focused element comes from the source app's own AX tree,
+    ///   so a different pid usually means content served by a helper process —
+    ///   Safari/WKWebView pages (WebContent), remote view services — not another
+    ///   app. Only another regular app's element counts as a focus change.
     static func classify(
         source: SourceApp,
         reading: FocusedElementReading,
         frontmostAfterRead: pid_t?,
         anchor: SelectionAnchor?,
-        capturedAt: Date
+        capturedAt: Date,
+        isRegularApp: (pid_t) -> Bool = { _ in false }
     ) -> Result<SelectionSnapshot, SelectionFailure> {
         if let failure = reading.failure { return .failure(failure) }
         if let error = reading.focusedElementError {
             return .failure(failure(forFocusedElementError: error))
         }
-        if let elementPID = reading.elementPID, elementPID != source.pid {
+        if let elementPID = reading.elementPID, elementPID != source.pid, isRegularApp(elementPID) {
             return .failure(.focusChanged)
         }
         if reading.isSecureTextField {

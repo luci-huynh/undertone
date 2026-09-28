@@ -155,10 +155,19 @@ struct TranslationPopupView: View {
                 if let action = content.action {
                     Button(action.label) { onAction(action) }
                 } else if content.phase != .notice && content.phase != .failed {
-                    Button(copied ? "Copied" : "Copy") {
+                    Button {
                         onCopy()
                         copied = true
+                    } label: {
+                        // ✓ in the space of “Copy”: the row keeps its width, so
+                        // ↻ and ⇄ never shift and the narrowest popup still fits.
+                        ZStack {
+                            Text("Copy").opacity(copied ? 0 : 1)
+                            Image(systemName: "checkmark").opacity(copied ? 1 : 0)
+                        }
                     }
+                    .help(copied ? "Copied" : "Copy the translation")
+                    .accessibilityLabel(copied ? "Copied" : "Copy")
                     .disabled(!content.canCopy)
                 }
                 if content.offersRetranslate {
@@ -206,8 +215,11 @@ struct TranslationPopupView: View {
 /// content grows (a streamed delta) the decision is kept, otherwise a new line
 /// would look like “the reader left the bottom”. Needs macOS 15; on macOS 14
 /// the popup keeps following while streaming.
-private struct BottomFollowTracker: ViewModifier {
+/// Also used by the Live window (L05).
+struct BottomFollowTracker: ViewModifier {
     @Binding var followsOutput: Bool
+    /// How close to the bottom counts as “at the bottom”.
+    var tolerance: CGFloat = 4
 
     private struct Metrics: Equatable {
         let distanceFromBottom: CGFloat
@@ -223,7 +235,7 @@ private struct BottomFollowTracker: ViewModifier {
                 )
             } action: { old, new in
                 guard new.contentHeight == old.contentHeight else { return }
-                followsOutput = new.distanceFromBottom <= 4
+                followsOutput = new.distanceFromBottom <= tolerance
             }
         } else {
             content

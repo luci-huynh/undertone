@@ -1,6 +1,8 @@
 import SwiftUI
 
 /// Settings: runtime/model status and selection, permission, shortcut.
+/// Vietnamese throughout (L08 review: one language per surface; the popup,
+/// menu and Live window follow PLAN's English wording).
 struct ContentView: View {
     let coordinator: AppCoordinator
 
@@ -11,15 +13,15 @@ struct ContentView: View {
             ShortcutSection(shortcut: coordinator.shortcut)
             SelectionTriggerSection(trigger: coordinator.selectionTrigger)
             LaunchAtLoginSection(launchAtLogin: coordinator.launchAtLogin)
-            Section {
-                Text("⌥T dịch văn bản đã chọn qua Ollama trên máy. Tự nhận diện: English → Vietnamese, Vietnamese → English, ngôn ngữ khác → Vietnamese; nút ⇄ trong popup đổi chiều cho lần dịch đó.")
-                    .foregroundStyle(.secondary)
-                Text("Nội dung dịch sẽ được xử lý trên máy qua Ollama.")
-                    .foregroundStyle(.secondary)
+            Section("Cách dùng") {
+                Text("⌥T dịch văn bản đang bôi đen. Tự nhận diện: tiếng Anh → tiếng Việt, tiếng Việt → tiếng Anh, ngôn ngữ khác → tiếng Việt; nút ⇄ trong popup đổi chiều cho lần dịch đó.")
+                Text("Dịch cuộc họp trực tiếp (tiếng Anh → tiếng Việt): menu Undertone ▸ Live Meeting Translation… — cần macOS 26 trở lên.")
             }
+            .foregroundStyle(.secondary)
         }
         .formStyle(.grouped)
-        .frame(width: 480, height: 720)
+        .frame(width: 480)
+        .frame(minHeight: 480, idealHeight: 680)
         .onAppear {
             coordinator.permission.refresh()
             Task { await coordinator.readiness.refresh() }
@@ -28,35 +30,51 @@ struct ContentView: View {
         // does not re-run onAppear; the window becoming key does.
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
             coordinator.permission.refresh()
+            coordinator.launchAtLogin.refresh()
         }
     }
 }
 
 private struct AccessibilityPermissionSection: View {
     let permission: AccessibilityPermissionService
+    /// The stale-grant hint only helps after the user has tried to grant.
+    @State private var openedSystemSettings = false
 
-    private static let hint = "Mở System Settings › Privacy & Security › Accessibility (macOS mới: Device Control and Data Access), bật LocalTranslator rồi quay lại đây."
-    private static let afterRequestHint = "Nếu đã từ chối hoặc không thấy hộp thoại, bật LocalTranslator trực tiếp trong System Settings › Privacy & Security › Accessibility (macOS mới: Device Control and Data Access)."
-    private static let staleGrantHint = "Nếu công tắc LocalTranslator đã bật mà vẫn báo chưa cấp quyền (thường gặp sau khi build lại app), xóa LocalTranslator khỏi danh sách bằng nút − rồi thêm lại, hoặc tắt rồi bật lại công tắc."
+    private static let hint = "Mở System Settings › Privacy & Security › Accessibility (macOS mới: Device Control and Data Access), bật Undertone rồi quay lại đây."
+    private static let afterRequestHint = "Nếu đã từ chối hoặc không thấy hộp thoại, bật Undertone trực tiếp trong System Settings › Privacy & Security › Accessibility (macOS mới: Device Control and Data Access)."
+    private static let staleGrantHint = "Công tắc đã bật mà vẫn báo chưa cấp quyền (thường gặp sau khi build lại app)? Xoá Undertone khỏi danh sách bằng nút − rồi thêm lại, hoặc tắt rồi bật lại công tắc."
 
     var body: some View {
-        Section("Accessibility") {
-            LabeledContent("Trạng thái", value: permission.state.label)
+        Section {
+            LabeledContent("Trạng thái") { badge }
             if permission.state == .notGranted {
-                Text("Local Translator needs Accessibility permission to read selected text.")
+                Text("Cần quyền này để đọc văn bản bạn bôi đen.")
                 Text(permission.hasRequestedThisLaunch ? Self.afterRequestHint : Self.hint)
                     .foregroundStyle(.secondary)
-                Text(Self.staleGrantHint)
-                    .foregroundStyle(.secondary)
+                if permission.hasRequestedThisLaunch || openedSystemSettings {
+                    Text(Self.staleGrantHint)
+                        .foregroundStyle(.secondary)
+                }
                 HStack {
                     if permission.canRequestAccess {
-                        Button("Request Access…") { permission.requestAccess() }
+                        Button("Xin quyền…") { permission.requestAccess() }
                     }
-                    Button("Open System Settings") { permission.openSystemSettings() }
-                    Spacer()
-                    Button("Refresh") { permission.refresh() }
+                    Button("Mở System Settings") {
+                        openedSystemSettings = true
+                        permission.openSystemSettings()
+                    }
                 }
             }
+        } header: {
+            Text("Quyền Accessibility")
+        }
+    }
+
+    private var badge: StatusBadge {
+        switch permission.state {
+        case .notChecked: StatusBadge(kind: .neutral, text: permission.state.label)
+        case .granted: StatusBadge(kind: .ok, text: permission.state.label)
+        case .notGranted: StatusBadge(kind: .error, text: permission.state.label)
         }
     }
 }
@@ -66,17 +84,29 @@ private struct ShortcutSection: View {
 
     var body: some View {
         Section("Phím tắt") {
-            LabeledContent(shortcut.combination.display, value: shortcut.status.label)
+            LabeledContent("Dịch văn bản đã chọn") {
+                StatusBadge(kind: kind, text: "\(shortcut.combination.display) · \(shortcut.status.label)")
+            }
             switch shortcut.status {
-            case .registered:
-                LabeledContent("Đã nhận trong phiên này", value: "\(shortcut.triggerCount) lần")
             case .conflict, .failed:
                 Text("\(shortcut.combination.display) đang được app khác dùng hoặc không đăng ký được. Hãy đóng app đang dùng phím tắt này rồi thử lại.")
                     .foregroundStyle(.secondary)
                 Button("Thử lại") { shortcut.start() }
-            case .inactive:
+            case .registered, .inactive:
                 EmptyView()
             }
+            #if DEBUG
+            LabeledContent("Đã nhận trong phiên này (Debug)", value: "\(shortcut.triggerCount) lần")
+            #endif
+        }
+    }
+
+    private var kind: StatusBadge.Kind {
+        switch shortcut.status {
+        case .registered: .ok
+        case .conflict: .warning
+        case .failed: .error
+        case .inactive: .neutral
         }
     }
 }
@@ -85,10 +115,12 @@ private struct SelectionTriggerSection: View {
     let trigger: SelectionTriggerService
 
     var body: some View {
-        Section("Nút dịch khi bôi đen") {
+        Section {
             Toggle("Hiện nút dịch cạnh con trỏ", isOn: Binding(get: { trigger.isEnabled }, set: { trigger.setEnabled($0) }))
+        } header: {
+            Text("Nút dịch khi bôi đen")
+        } footer: {
             Text("Kéo chuột hoặc nhấp đúp để bôi đen → bấm biểu tượng dịch. Chỉ theo dõi chuột, không theo dõi bàn phím; ⌥T luôn dùng được.")
-                .foregroundStyle(.secondary)
         }
     }
 }
@@ -98,14 +130,14 @@ private struct LaunchAtLoginSection: View {
 
     var body: some View {
         Section("Khởi động") {
-            Toggle("Mở cùng macOS (Launch at Login)", isOn: Binding(get: { launchAtLogin.isOn }, set: { launchAtLogin.setOn($0) }))
+            Toggle("Mở cùng macOS", isOn: Binding(get: { launchAtLogin.isOn }, set: { launchAtLogin.setOn($0) }))
             if launchAtLogin.needsApproval {
                 Text("macOS cần bạn cho phép trong Login Items.")
                     .foregroundStyle(.secondary)
                 Button("Mở Login Items") { launchAtLogin.openSystemSettings() }
             }
             if let error = launchAtLogin.lastError {
-                Text(error).foregroundStyle(.red)
+                StatusBadge(kind: .error, text: error)
             }
         }
         // The user may change it in System Settings while this window is open.
@@ -121,41 +153,33 @@ private struct OllamaSection: View {
     #endif
 
     var body: some View {
-        Section("Ollama") {
-            LabeledContent("Ollama", value: runtimeText)
-            switch readiness.runtime {
-            case .notRunning:
-                Text("Ollama is not running.")
-                HStack {
-                    Button("Retry") { Task { await readiness.refresh() } }
-                    if OllamaAppLauncher.appURL != nil {
-                        Button("Open Ollama") { OllamaAppLauncher.open() }
-                    }
-                }
-            case .endpointRejected:
-                Text("Địa chỉ Ollama đã cấu hình không phải localhost nên bị chặn; không gửi gì ra ngoài máy.")
+        Section {
+            LabeledContent("Trạng thái") { runtimeBadge }
+            if let runtimeDetail {
+                Text(runtimeDetail)
                     .foregroundStyle(.secondary)
-            case .invalidResponse:
-                Text("Cổng 11434 trả lời nhưng không phải Ollama API.")
-                    .foregroundStyle(.secondary)
-            case .notChecked, .connected:
-                EmptyView()
             }
             modelRow
             switch readiness.model {
             case .missing:
-                Text("Translation model is not installed.")
-                Text("Tải thủ công trong Terminal: ollama pull \(readiness.configuration.tag)")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
+                VStack(alignment: .leading, spacing: 4) {
+                    StatusBadge(kind: .error, text: "Chưa cài model dịch. Tải trong Terminal:")
+                    Text("ollama pull \(readiness.configuration.tag)")
+                        .font(.body.monospaced())
+                        .textSelection(.enabled)
+                }
             case .cloudRejected:
-                Text("Model cloud chạy trên server của Ollama nên bị từ chối; chọn model local.")
-                    .foregroundStyle(.secondary)
+                StatusBadge(kind: .error, text: "Model cloud chạy trên server của Ollama nên bị từ chối; chọn model local.")
             case .unknown, .installed:
                 EmptyView()
             }
-            Button("Kiểm tra lại") { Task { await readiness.refresh() } }
+            HStack {
+                // The only refresh button: Settings also re-checks every 20 s.
+                Button("Kiểm tra lại") { Task { await readiness.refresh() } }
+                if readiness.runtime == .notRunning, OllamaAppLauncher.appURL != nil {
+                    Button("Mở Ollama") { OllamaAppLauncher.open() }
+                }
+            }
             #if DEBUG
             HStack {
                 Button("Dịch thử câu mẫu (Debug)") { translateSample() }
@@ -168,29 +192,52 @@ private struct OllamaSection: View {
                     .textSelection(.enabled)
             }
             #endif
+        } header: {
+            Text("Ollama")
+        } footer: {
+            Text("Văn bản chỉ được gửi tới Ollama trên chính máy này (localhost), không ra ngoài.")
         }
     }
 
-    private var runtimeText: String {
-        if case .connected(let version) = readiness.runtime { return "Connected (\(version))" }
-        return readiness.runtime.label
+    private var runtimeBadge: StatusBadge {
+        switch readiness.runtime {
+        case .notChecked: StatusBadge(kind: .neutral, text: "Đang kiểm tra…")
+        case .connected(let version): StatusBadge(kind: .ok, text: "Đã kết nối · \(version)")
+        case .notRunning: StatusBadge(kind: .error, text: "Chưa chạy")
+        case .notResponding: StatusBadge(kind: .warning, text: "Không phản hồi")
+        case .invalidResponse: StatusBadge(kind: .warning, text: "Phản hồi không đúng")
+        case .endpointRejected: StatusBadge(kind: .error, text: "Bị chặn: không phải localhost")
+        }
+    }
+
+    private var runtimeDetail: String? {
+        switch readiness.runtime {
+        case .notRunning: "Mở Ollama rồi bấm Kiểm tra lại."
+        case .notResponding: "Ollama không trả lời kịp (đang bận hoặc đang khởi động). Thử lại sau giây lát."
+        case .invalidResponse: "Cổng \(readiness.client?.baseURL.port ?? 11434) trả lời nhưng không phải Ollama API."
+        case .endpointRejected: "Địa chỉ Ollama đã cấu hình không phải localhost nên bị chặn; không gửi gì ra ngoài máy."
+        case .notChecked, .connected: nil
+        }
     }
 
     @ViewBuilder
     private var modelRow: some View {
-        let options = Array(Set(readiness.installedLocalModels + [readiness.configuration.tag])).sorted()
+        let tag = readiness.configuration.tag
         if readiness.installedLocalModels.isEmpty {
-            LabeledContent("Model", value: readiness.modelLabel)
+            LabeledContent("Model", value: readiness.model == .missing ? "\(tag) (chưa cài)" : tag)
         } else {
-            Picker("Model", selection: Binding(
-                get: { readiness.configuration.tag },
-                set: { readiness.selectModel($0) }
-            )) {
-                ForEach(options, id: \.self) { tag in
-                    Text(readiness.installedLocalModels.contains(tag) ? tag : "\(tag) (not installed)").tag(tag)
+            let options = Array(Set(readiness.installedLocalModels + [tag])).sorted()
+            Picker("Model", selection: Binding(get: { tag }, set: { readiness.selectModel($0) })) {
+                ForEach(options, id: \.self) { option in
+                    Text(Self.optionTitle(option, installed: readiness.installedLocalModels.contains(option))).tag(option)
                 }
             }
         }
+    }
+
+    private static func optionTitle(_ tag: String, installed: Bool) -> String {
+        if !installed { return "\(tag) (chưa cài)" }
+        return tag == TranslationModelConfiguration.defaultTag ? "\(tag) (khuyên dùng)" : tag
     }
 
     #if DEBUG

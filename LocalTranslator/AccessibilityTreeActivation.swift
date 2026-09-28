@@ -19,7 +19,7 @@ nonisolated enum AccessibilityTreeActivation {
     static let retries = 4
     static let retryDelay: TimeInterval = 0.05
 
-    private static let logger = Logger(subsystem: "local.chienhuynh.LocalTranslator", category: "selection")
+    private static let logger = Logger(subsystem: "local.chienhuynh.Undertone", category: "selection")
     private static let attempted = OSAllocatedUnfairLock(initialState: Set<pid_t>())
 
     /// Only "nothing there" answers; a timeout or disabled API is a different problem.

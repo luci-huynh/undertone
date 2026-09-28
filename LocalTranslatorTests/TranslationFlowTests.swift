@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 private let selectionAnchor = SelectionAnchor(
     source: .selectionBounds, rect: CGRect(x: 200, y: 500, width: 120, height: 18), screenIndex: 0, visibleFrame: testScreen
@@ -64,8 +64,10 @@ struct TranslationFlowTests {
         let flow = TranslationCoordinator.fake(popup: popup)
         flow.trigger()
         await flow.captureTask?.value
-        #expect(popup.current?.body == "No text selected.")
-        #expect(popup.current?.phase == .notice)
+        // What was shown, not what is still visible: with a zero notice
+        // duration the auto-dismiss may already have run (flaky at L08).
+        #expect(popup.shown.last?.content.body == "No text selected.")
+        #expect(popup.shown.last?.content.phase == .notice)
         #expect(popup.shown.last?.anchor == cursorTestAnchor)
         await flow.noticeTask?.value
         #expect(!popup.isVisible)
@@ -80,7 +82,7 @@ struct TranslationFlowTests {
         flow.onOpenAccessibilitySettings = { opened += 1 }
         flow.trigger()
         await flow.captureTask?.value
-        #expect(popup.current?.body == "Local Translator needs Accessibility permission to read selected text.")
+        #expect(popup.current?.body == "Undertone needs Accessibility permission to read selected text.")
         #expect(popup.current?.action == .openAccessibilitySettings)
         #expect(flow.noticeTask == nil)
         popup.onAction?(.openAccessibilitySettings)
@@ -283,6 +285,9 @@ struct TranslationFlowTests {
         await settle { translator.terminatedRequests == [0] }
         #expect(translator.terminatedRequests == [0])
         await flow.captureTask?.value
+        // The second request must have reached the translator before closing,
+        // or there is no stream to cancel (flaky at L08).
+        await settle { translator.inputs.count == 2 }
         let second = flow.translationTask
         popup.dismissByUser()
         await second?.value
@@ -615,7 +620,7 @@ struct PlaceholderTranslationTests {
 
     @Test func failureMessagesFollowPlanAndCompatibility() {
         #expect(SelectionFailure.noSelection.popupMessage == "No text selected.")
-        #expect(SelectionFailure.permissionMissing.popupMessage == "Local Translator needs Accessibility permission to read selected text.")
+        #expect(SelectionFailure.permissionMissing.popupMessage == "Undertone needs Accessibility permission to read selected text.")
         #expect(SelectionFailure.secureInput.popupMessage != nil)
         #expect(SelectionFailure.focusChanged.popupMessage == nil)
         #expect(SelectionFailure.cancelled.popupMessage == nil)
@@ -625,7 +630,7 @@ struct PlaceholderTranslationTests {
     /// permission case offers System Settings.
     @Test(arguments: [
         (SelectionFailure.noSelection, "No text selected." as String?),
-        (.permissionMissing, "Local Translator needs Accessibility permission to read selected text."),
+        (.permissionMissing, "Undertone needs Accessibility permission to read selected text."),
         (.unsupported, "Can't read selected text in this app."),
         (.noFocusedElement, "Can't read selected text in this app."),
         (.axError(-25204), "Can't read selected text in this app."),

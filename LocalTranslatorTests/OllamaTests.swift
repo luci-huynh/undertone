@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 struct LocalEndpointPolicyTests {
     @Test func acceptsOnlyPlainHTTPLoopback() {
@@ -137,6 +137,56 @@ struct OllamaClientTests {
         await #expect(throws: OllamaError.endpointRejected) { try await client.version() }
     }
 
+    @Test(arguments: [false, true])
+    func remoteAliasAndUnknownMetadataNeverSendText(streaming: Bool) async throws {
+        let cases: [(String, OllamaError)] = [
+            (#"{"models":[{"name":"alias:latest","remote_host":"https://ollama.com"}]}"#, .cloudModelRejected("alias")),
+            (#"{"models":[]}"#, .modelMissing("alias")),
+            (#"{"unexpected":true}"#, .invalidResponse),
+        ]
+        for (metadata, expected) in cases {
+            let transport = MockTransport { _ in (200, Data(metadata.utf8), nil) }
+            let client = try OllamaClient(baseURL: base, transport: transport)
+            await #expect(throws: expected) {
+                if streaming {
+                    for try await _ in client.chatStream(model: "alias", messages: [.init(role: "user", content: "synthetic")]) {}
+                } else {
+                    _ = try await client.chat(model: "alias", messages: [.init(role: "user", content: "synthetic")])
+                }
+            }
+            #expect(transport.requests.count == 1)
+            #expect(transport.requests.allSatisfy { $0.url?.path == "/api/tags" && $0.httpBody == nil })
+        }
+    }
+
+    @Test(arguments: [false, true])
+    func localAliasIsCheckedAgainForEveryRequest(streaming: Bool) async throws {
+        let changedToRemote = Flag()
+        let local = MockTransport.ollama(models: ["alias"], reply: "Synthetic reply")
+        let transport = MockTransport { request in
+            if request.url?.path == "/api/tags" {
+                let metadata = changedToRemote.isOn
+                    ? #"{"models":[{"name":"alias:latest","remote_host":"https://ollama.com"}]}"#
+                    : #"{"models":[{"name":"alias:latest"}]}"#
+                return (200, Data(metadata.utf8), nil)
+            }
+            return try local.routeForTests(request)
+        }
+        let client = try OllamaClient(baseURL: base, transport: transport)
+        func translate() async throws -> String {
+            let messages = [Ollama.ChatMessage(role: "user", content: "synthetic")]
+            if !streaming { return try await client.chat(model: "alias", messages: messages) }
+            var output = ""
+            for try await delta in client.chatStream(model: "alias", messages: messages) { output += delta }
+            return output
+        }
+        #expect(try await translate() == "Synthetic reply")
+        changedToRemote.isOn = true
+        await #expect(throws: OllamaError.cloudModelRejected("alias")) { try await translate() }
+        #expect(transport.requests.filter { $0.url?.path == "/api/chat" }.count == 1)
+        #expect(transport.requests.filter { $0.url?.path == "/api/tags" }.count == 2)
+    }
+
     @Test func emptyOutputIsAnError() async throws {
         let client = try OllamaClient(baseURL: base, transport: MockTransport.ollama(models: ["m:1"], reply: " \n"))
         await #expect(throws: OllamaError.emptyOutput) {
@@ -183,6 +233,13 @@ struct OllamaReadinessTests {
         #expect(empty.runtime == .connected(version: "0.34.4"))
         #expect(empty.model == .missing)
         #expect(empty.modelLabel == "translategemma:12b (not installed)")
+    }
+
+    @Test func aCheckThatTimesOutIsNotRespondingNotUnexpected() async {
+        let slow = OllamaReadinessService(settings: MemoryModelSettings(), transport: MockTransport { _ in throw URLError(.timedOut) })
+        await slow.refresh()
+        #expect(slow.runtime == .notResponding)
+        #expect(!slow.isReady)
     }
 
     @Test func nonLocalEndpointOverrideSendsNothing() async {

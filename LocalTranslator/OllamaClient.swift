@@ -131,7 +131,7 @@ nonisolated struct OllamaClient: Sendable {
     func chat(
         model: String, messages: [Ollama.ChatMessage], keepAlive: String? = nil, options: Ollama.ChatOptions? = nil
     ) async throws -> String {
-        let request = try makeChatRequest(model: model, messages: messages, stream: false, keepAlive: keepAlive, options: options)
+        let request = try await makeChatRequest(model: model, messages: messages, stream: false, keepAlive: keepAlive, options: options)
         let data = try await perform(request, model: model)
         let response = try decode(Ollama.ChatResponse.self, from: data)
         if let error = response.error { throw OllamaError.http(status: 200, message: error) }
@@ -149,11 +149,10 @@ nonisolated struct OllamaClient: Sendable {
         model: String, messages: [Ollama.ChatMessage], keepAlive: String? = nil, options: Ollama.ChatOptions? = nil
     ) -> AsyncThrowingStream<String, Error> {
         let transport = transport
-        let prepared = Result { try makeChatRequest(model: model, messages: messages, stream: true, keepAlive: keepAlive, options: options) }
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    let request = try prepared.get()
+                    let request = try await makeChatRequest(model: model, messages: messages, stream: true, keepAlive: keepAlive, options: options)
                     var parser = OllamaChatStreamParser()
                     var status: Int?
                     var errorBody = Data()
@@ -194,8 +193,14 @@ nonisolated struct OllamaClient: Sendable {
 
     private func makeChatRequest(
         model: String, messages: [Ollama.ChatMessage], stream: Bool, keepAlive: String?, options: Ollama.ChatOptions?
-    ) throws -> URLRequest {
+    ) async throws -> URLRequest {
         guard !ModelTag.isCloud(model) else { throw OllamaError.cloudModelRejected(model) }
+        // Check fresh metadata for both chat paths: a saved alias can point to
+        // a remote model even without a cloud suffix. Never send text if unknown.
+        let matches = try await installedModels().filter { ModelTag.normalized($0.name) == ModelTag.normalized(model) }
+        guard !matches.isEmpty else { throw OllamaError.modelMissing(model) }
+        guard matches.allSatisfy(\.isLocal) else { throw OllamaError.cloudModelRejected(model) }
+        try Task.checkCancellation()
         let body = Ollama.ChatRequest(model: model, messages: messages, stream: stream, keepAlive: keepAlive, options: options)
         var request = try makeRequest("api/chat", timeout: generationTimeout)
         request.httpMethod = "POST"

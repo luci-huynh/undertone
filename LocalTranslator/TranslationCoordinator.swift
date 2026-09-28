@@ -133,7 +133,7 @@ final class TranslationCoordinator {
     let state = TranslationStateMachine()
     var onOpenAccessibilitySettings: (() -> Void)?
 
-    private let logger = Logger(subsystem: "local.chienhuynh.LocalTranslator", category: "selection")
+    private let logger = Logger(subsystem: "local.chienhuynh.Undertone", category: "selection")
     private var triggerSequence = 0
     private var anchor: SelectionAnchor?
     /// The open popup's text and direction, kept only while it is open (for ⇄).

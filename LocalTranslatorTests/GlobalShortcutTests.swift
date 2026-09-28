@@ -1,5 +1,5 @@
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 @MainActor
 struct GlobalShortcutTests {

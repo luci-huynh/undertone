@@ -17,7 +17,9 @@ nonisolated enum TranslationError: Equatable, Sendable {
     /// The stream ended early (no `done`) or was cancelled by the system.
     case interrupted
     /// Ollama reported an error (e.g. not enough memory); its own text, if any.
-    case ollama(message: String?)
+    /// A request Ollama rejected (HTTP 4xx, e.g. a model that can't chat)
+    /// fails the same way again, so it offers no Retry (L08 review).
+    case ollama(message: String?, retryable: Bool = true)
     case emptyOutput
     /// Not sent: longer than the context budget (S22).
     case inputTooLong
@@ -36,7 +38,8 @@ nonisolated enum TranslationError: Equatable, Sendable {
         case OllamaError.streamStalled: self = .stalled
         case OllamaError.malformedStream, OllamaError.invalidResponse: self = .malformedResponse
         case OllamaError.incompleteStream, is CancellationError: self = .interrupted
-        case OllamaError.http(_, let message): self = .ollama(message: message)
+        case OllamaError.http(let status, let message):
+            self = .ollama(message: message, retryable: !(400..<500).contains(status) || status == 408 || status == 429)
         case OllamaError.emptyOutput: self = .emptyOutput
         case OllamaError.inputTooLong: self = .inputTooLong
         case OllamaError.outputTruncated: self = .outputTruncated
@@ -53,7 +56,7 @@ nonisolated enum TranslationError: Equatable, Sendable {
         case .stalled: "Ollama stopped responding."
         case .malformedResponse: "Ollama sent an unexpected response."
         case .interrupted: "The translation was interrupted."
-        case .ollama(let message): Self.ollamaMessage(message)
+        case .ollama(let message, _): Self.ollamaMessage(message)
         case .emptyOutput: "No translation returned."
         case .inputTooLong: "Selected text is too long to translate at once."
         case .outputTruncated: "Translation stopped early: the text is too long."
@@ -66,7 +69,8 @@ nonisolated enum TranslationError: Equatable, Sendable {
     /// offered where the same request would fail the same way.
     var allowsRetry: Bool {
         switch self {
-        case .runtimeUnavailable, .coldStartTimeout, .stalled, .malformedResponse, .interrupted, .ollama, .emptyOutput, .unavailable: true
+        case .ollama(_, let retryable): retryable
+        case .runtimeUnavailable, .coldStartTimeout, .stalled, .malformedResponse, .interrupted, .emptyOutput, .unavailable: true
         case .modelMissing, .inputTooLong, .outputTruncated, .notLocal: false
         }
     }
@@ -103,7 +107,7 @@ extension SelectionFailure {
     var popupMessage: String? {
         switch self {
         case .noSelection: "No text selected."
-        case .permissionMissing: "Local Translator needs Accessibility permission to read selected text."
+        case .permissionMissing: "Undertone needs Accessibility permission to read selected text."
         case .unsupported, .noFocusedElement, .axError: "Can't read selected text in this app."
         case .secureInput: "Secure input is on. Selected text isn't read."
         case .timedOut: "The app didn't respond. Try again."
@@ -121,7 +125,8 @@ extension SelectionFailure {
 /// Limits come from measurements on this Mac (docs/PROGRESS.md S23): first
 /// token ≤ 6.3 s cold, ≤ 3.1 s warm with a 4.9 KB selection; longest gap
 /// between deltas 163 ms. There is no total limit: a long selection
-/// legitimately streams for about two minutes.
+/// legitimately streams for about two minutes. Time asleep does not count
+/// (SuspendingClock): a stream that resumes after wake is not a stall.
 nonisolated enum StreamWatchdog {
     static let firstTokenLimit: Duration = .seconds(60)
     static let stallLimit: Duration = .seconds(15)
@@ -151,12 +156,16 @@ nonisolated enum StreamWatchdog {
                 while !Task.isCancelled {
                     let (count, last) = activity.snapshot
                     let deadline = last + (count == 0 ? first : between)
-                    if ContinuousClock.now >= deadline {
-                        reader.cancel()
+                    if SuspendingClock.now >= deadline {
+                        // Publish the error before cancellation can end the reader
+                        // normally. onTermination then cancels both tasks.
                         continuation.finish(throwing: count == 0 ? OllamaError.coldStartTimeout : OllamaError.streamStalled)
                         return
                     }
-                    try? await Task.sleep(until: deadline, clock: .continuous)
+                    // ponytail: at most 100 ms polling delay (plus scheduling);
+                    // use an activity wake-up if tighter timeout precision is needed.
+                    let nextCheck = min(deadline, SuspendingClock.now + .milliseconds(100))
+                    try? await Task.sleep(until: nextCheck, clock: .suspending)
                 }
             }
             continuation.onTermination = { _ in
@@ -169,9 +178,9 @@ nonisolated enum StreamWatchdog {
     private final class Activity: @unchecked Sendable {
         private let lock = NSLock()
         private var count = 0
-        private var last = ContinuousClock.now
+        private var last = SuspendingClock.now
 
-        var snapshot: (Int, ContinuousClock.Instant) { lock.withLock { (count, last) } }
+        var snapshot: (Int, SuspendingClock.Instant) { lock.withLock { (count, last) } }
 
         func record() {
             lock.withLock {

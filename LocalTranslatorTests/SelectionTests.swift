@@ -1,15 +1,18 @@
 import ApplicationServices
 import Foundation
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 @MainActor
 struct SelectionClassifierTests {
     private let source = SourceApp(pid: 42, name: "TextEdit")
     private let now = Date(timeIntervalSince1970: 1_000)
 
-    private func classify(_ reading: FocusedElementReading, after: pid_t? = 42) -> Result<SelectionSnapshot, SelectionFailure> {
-        SelectionClassifier.classify(source: source, reading: reading, frontmostAfterRead: after, anchor: nil, capturedAt: now)
+    private func classify(_ reading: FocusedElementReading, after: pid_t? = 42, regularApps: Set<pid_t> = [42, 99]) -> Result<SelectionSnapshot, SelectionFailure> {
+        SelectionClassifier.classify(
+            source: source, reading: reading, frontmostAfterRead: after, anchor: nil, capturedAt: now,
+            isRegularApp: { regularApps.contains($0) }
+        )
     }
 
     private func reading(_ text: AXRead<String>?, range: NSRange? = nil) -> FocusedElementReading {
@@ -56,9 +59,18 @@ struct SelectionClassifierTests {
     @Test func focusChangeDuringReadRejectsSnapshot() {
         #expect(classify(reading(.value("hello")), after: 99) == .failure(.focusChanged))
         #expect(classify(reading(.value("hello")), after: nil) == .failure(.focusChanged))
-        var otherElement = reading(.value("hello"))
-        otherElement.elementPID = 7
-        #expect(classify(otherElement) == .failure(.focusChanged))
+        // An element of another regular app is a focus change.
+        var otherApp = reading(.value("hello"))
+        otherApp.elementPID = 99
+        #expect(classify(otherApp) == .failure(.focusChanged))
+    }
+
+    /// L08 review: Safari/WKWebView pages are served by a helper process whose
+    /// pid differs from the app's; that is not a focus change.
+    @Test func helperProcessElementIsReadNormally() {
+        var webContent = reading(.value("hello from a web page"))
+        webContent.elementPID = 7_777
+        #expect(classify(webContent, regularApps: [42]).map(\.text) == .success("hello from a web page"))
     }
 }
 
@@ -128,7 +140,7 @@ struct SelectedTextServiceTests {
 
     @Test func ownAppAndMissingFrontmostAreRejected() async {
         let query = FakeFocusedElementQuery(reading: FocusedElementReading(selectedText: .value("x")))
-        let own = await service(environment: FakeSelectionEnvironment(frontmost: [SourceApp(pid: 1, name: "Local Translator")]), query: query).capture()
+        let own = await service(environment: FakeSelectionEnvironment(frontmost: [SourceApp(pid: 1, name: "Undertone")]), query: query).capture()
         #expect(own == .failure(.sourceIsSelf))
         let none = await service(environment: FakeSelectionEnvironment(frontmost: [nil]), query: query).capture()
         #expect(none == .failure(.noFrontmostApp))

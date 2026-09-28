@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 private func snapshot(_ text: String) -> SelectionSnapshot {
     SelectionSnapshot(sourcePID: 42, sourceAppName: "TextEdit", text: text, range: nil, anchor: nil, capturedAt: Date())
@@ -159,7 +159,7 @@ struct SelectionTriggerTests {
     @Test func defaultSettingIsOn() {
         // One fixed suite, emptied afterwards: macOS keeps an empty plist for
         // it, so runs do not pile up files (S26).
-        let suite = "local.chienhuynh.LocalTranslator.tests"
+        let suite = "local.chienhuynh.Undertone.tests"
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)
         defer { defaults.removePersistentDomain(forName: suite) }

@@ -1,6 +1,6 @@
 import CoreGraphics
 import Testing
-@testable import LocalTranslator
+@testable import Undertone
 
 /// Layouts in AppKit points. Primary 1440×900 (menu bar 25 pt); a Retina
 /// display reports points too, so no scale factor appears anywhere.
