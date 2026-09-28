@@ -52,7 +52,7 @@ Route A (personal use). Not published, tagged, pushed or notarized. (The 0.1.0 a
 | 5 | Code + network + storage/log audit: local only, no microphone, nothing stored | PASS | L07 audit (`PRIVACY.md`, `LIVE-QA.md`); L08 changes add no network, storage or text logging (reviewed) |
 | 6 | Latency/backlog/CPU/RAM on this Mac, ≥ 30 min, within the L01 thresholds | PASS | L07 31 min (speech p50 9 ms / p95 26 ms, translation p50 1.9 s / p95 3.8 s, backlog 0, CPU 5.6 % avg); L08 75 s re-check: speech p50 4 ms / p95 975 ms, translation p50 1.5 s / p95 2.3 s, CPU ≤ 3.8 %, 25 MB |
 | 7 | Text regression with Live off, running and just stopped; per-app limits; untested marked NOT RUN | PASS (automated); user check on 0.2.0 pending | 320 tests in 58 suites ×2; live Ollama suites (quality 15/15 on rerun), live speech suite; Teams + Chrome tested, **Slack huddle NOT RUN** |
-| 8 | User accepts Feature 2 separately | **PENDING** | — |
+| 8 | User accepts Feature 2 separately | **PASS** | User, 2026-09-28, on Undertone 0.3.0 (4): “Không cần xoá, nghiệm thu đi”; untested items stay NOT RUN (Slack huddle, Safari, L06 hardware checks) |
 
 ### PLAN §20 — text DoD on 0.2.0
 
