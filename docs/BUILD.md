@@ -68,3 +68,7 @@ Manual binary: `.build/DerivedData/Build/Products/Debug/LocalTranslator.app`. La
 ## S07 configuration change
 
 App target `ENABLE_APP_SANDBOX = NO` (Debug and Release), approved by the user after a diagnostic build proved the sandbox blocked the Accessibility prompt. Entitlements now: `com.apple.security.files.user-selected.read-only`, `com.apple.security.get-task-allow` (no app-sandbox). Release build (R) exit 0 on 2026-09-27; log `.build/logs/S07-nosandbox-release.log`.
+
+## S08b signing
+
+App and test targets use `DEVELOPMENT_TEAM = 6T9Y4G54XN` (Xcode Personal Team) with automatic signing; builds are signed “Apple Development” instead of ad-hoc. If the certificate is missing on a machine, run command B once with `-allowProvisioningUpdates` (requires the Apple ID in Xcode › Settings › Accounts). Do not disable signing. 2026-09-27: B, T, R exit 0 (`.build/logs/S08b-*.log`).

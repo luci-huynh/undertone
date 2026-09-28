@@ -2,11 +2,18 @@
 
 Tài liệu điều hành phát triển theo từng bước, có xác nhận bắt buộc. **PLAN.md là product spec; runbook này quy định cách thực hiện, không thay thế spec.**
 
-Runbook chưa được đối chiếu với bản PLAN.md thực tế. Tên file Swift bên dưới là cấu trúc đề xuất; khi repo đã có cấu trúc hợp lý, dùng cấu trúc hiện có và ghi rõ mapping. Không tự thêm tính năng chỉ vì có tên trong ví dụ.
+Phạm vi hai feature đã được đối chiếu với PLAN.md theo DOC01 (2026-09-28). Tên file Swift bên dưới là cấu trúc đề xuất; khi repo đã có cấu trúc hợp lý, dùng cấu trúc hiện có và ghi rõ mapping. Không tự thêm tính năng chỉ vì có tên trong ví dụ.
+
+## Lộ trình hai feature — không đổi tiến độ hiện tại
+
+- **Feature 1: Dịch text — S01–S31.** Giữ nguyên ID, thứ tự, implementation và bằng chứng đã có. Tiếp tục từ bước chưa hoàn tất trong `docs/PROGRESS.md`, không quay lại S01 hay dựng lại project.
+- **Feature 2: Live cuộc họp — L01–L08, mục 6.** Chỉ bắt đầu sau khi Feature 1 được nghiệm thu tại S31 và có xác nhận riêng cho L01. Không cài ASR, xin quyền audio, scaffold hay refactor text để chuẩn bị Live trong S01–S31.
+- ⌥T chỉ dịch text đã chọn. Live dùng Start/Stop riêng, audio cuộc họp → ASR local → phụ đề gốc và bản dịch local cùng cửa sổ. Streaming ở S19–S20 là streaming bản dịch text, không phải Live cuộc họp.
+- Cập nhật roadmap không phải xác nhận hoàn tất S16, chọn model S17, hoặc cho phép bất kỳ bước implementation nào. DOC01 chỉ sửa tài liệu.
 
 ## 1. Operator protocol — đọc trước mọi bước
 
-1. Chỉ thực hiện **một bước có ID** trong mỗi lượt được người dùng cho phép. Bắt đầu bằng S01. Không chạy toàn bộ tài liệu.
+1. Chỉ thực hiện **một bước có ID** trong mỗi lượt được người dùng cho phép. Repo mới bắt đầu bằng S01; repo đang làm tiếp tục theo PROGRESS.md. Không chạy toàn bộ tài liệu. Quy tắc một ID/lượt áp dụng cả Sxx, Lxx và lượt tài liệu DOCxx.
 2. Sau **mọi bước**, kể cả chỉ mở Xcode, kiểm tra repo, bước bị skip, bước thất bại hoặc kiểm tra thành công: **STOP và hỏi xác nhận rõ ràng**. Không tự bắt đầu bước tiếp theo. Full permissions chỉ cho phép thao tác trong bước đang được giao; không thay thế xác nhận chuyển bước.
 3. Không gộp hai ID vào một lượt, không chuẩn bị ngầm code của bước sau, không giao agent khác làm trước. Các thao tác triển khai và kiểm tra liệt kê trong một ID thuộc một đơn vị công việc. Nếu phát hiện cần chia ID thành sub-phase, đặt ID như S08a/S08b **trước khi làm**, thực hiện duy nhất sub-phase đầu và xin xác nhận trước sub-phase sau.
 4. Xác nhận hợp lệ: người dùng yêu cầu rõ bước cụ thể, ví dụ `Xác nhận S08, làm S09`. `Tiếp tục` chỉ có hiệu lực cho đúng một bước kế tiếp khi trạng thái không mơ hồ. Im lặng, thời gian chờ, quyền hệ thống, build pass và lời xác nhận cũ không phải xác nhận mới.
@@ -15,7 +22,7 @@ Runbook chưa được đối chiếu với bản PLAN.md thực tế. Tên file
 7. Có thể sửa lỗi trực tiếp thuộc bước đang chạy rồi kiểm tra lại trong cùng lượt. Nếu cần đổi scope, quyền, dependency hoặc kiến trúc đã chốt: dừng tại blocker. Không chuyển bước khi còn lỗi bắt buộc.
 8. Không xóa/ghi đè thay đổi sẵn có. Trước sửa, đọc diff và ghi danh sách file dự kiến. Không `git reset --hard`, `git clean -fd`, force push hoặc reset quyền toàn hệ thống. Không commit/push/publish tự động. Chỉ tạo checkpoint commit khi người dùng cho phép riêng; chỉ stage file thuộc bước đó.
 9. Quyền đầy đủ vẫn không cho phép vượt cơ chế bảo vệ macOS. Người dùng tự xác nhận hộp thoại quyền, đăng nhập Apple ID, nhập mật khẩu. Nếu công cụ UI không khả dụng, đưa thao tác tay chính xác và chờ kết quả; không báo đã click khi chưa thực hiện.
-10. Inference chỉ local qua Ollama. Không gửi văn bản chọn lên cloud, telemetry hoặc log. Không tự bật fallback cloud. Tải app/model có thể cần Internet; sau setup phải thử offline. Không gọi dịch trên nội dung thật chỉ để debug.
+10. Dịch chỉ local qua Ollama; nhận dạng giọng nói của Feature 2 dùng runtime/model on-device đã duyệt ở L01. Không gửi văn bản chọn, audio, transcript hoặc bản dịch lên cloud, telemetry hoặc log; không lưu nội dung phiên Live. Không tự bật fallback cloud. Tải app/model có thể cần Internet; sau setup phải thử offline. Không gọi dịch trên nội dung thật chỉ để debug.
 11. Không báo manual check là PASS nếu chưa quan sát hoặc chưa được người dùng xác nhận. Phân biệt `PASS`, `FAIL`, `BLOCKED`, `NOT RUN`. Một bước phụ thuộc kiểm tra tay chưa làm phải giữ trạng thái chờ.
 12. Kết thúc lượt bằng báo cáo và câu hỏi mẫu bên dưới rồi **kết thúc response**. Không dùng vòng lặp chờ rồi tự tiếp tục.
 
@@ -1010,7 +1017,7 @@ Sau bước này STOP / WAIT FOR USER CONFIRMATION. Không tự tiếp tục dù
 
 **STOP / WAIT FOR USER CONFIRMATION**
 
-Báo cáo theo mẫu mục 1. Chỉ sau xác nhận mới được thực hiện **nghiệm thu cuối (không có bước tự động tiếp theo)**. Nếu cần một sub-phase sửa lỗi, sub-phase đó cũng phải kết thúc bằng STOP riêng.
+Báo cáo theo mẫu mục 1. Chỉ sau xác nhận mới được thực hiện **nghiệm thu Feature 1 — dịch text**. L01 chỉ được bắt đầu sau nghiệm thu này và xác nhận riêng; không có bước tự động tiếp theo. Nếu cần một sub-phase sửa lỗi, sub-phase đó cũng phải kết thúc bằng STOP riêng.
 
 ## 4. Khi chat bị ngắt hoặc cần tiếp tục ở chat khác
 
@@ -1046,4 +1053,93 @@ Tra cứu lại theo SDK/runtime thực tế khi triển khai; các URL này kh�
 - [Ollama macOS](https://docs.ollama.com/macos): cài đặt và yêu cầu runtime.
 - [Apple notarization](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution): kiểm tra trước phân phối.
 
-**Điểm kết thúc:** S31 chỉ bàn giao để nghiệm thu. Không có quyền ngầm để publish, tạo release, push repo hoặc bắt đầu feature mới.
+**Điểm kết thúc Feature 1:** S31 bàn giao dịch text để nghiệm thu. Lộ trình Live bên dưới không cấp quyền ngầm để bắt đầu feature mới, publish, tạo release hoặc push repo.
+
+
+## 6. Feature 2 — Live cuộc họp (L01–L08)
+
+**Điều kiện vào:** S31 đã được người dùng nghiệm thu cho dịch text; người dùng cho phép riêng L01. Nếu chưa đủ, báo gate chưa đạt và STOP, tiếp tục Feature 1 theo progress khi được phép. Không làm trước các bước dưới đây.
+
+**Quy tắc chung cho từng Lxx:** đọc PLAN §24, AGENTS.md và PROGRESS.md; chỉ làm một ID được giao; cập nhật progress với bằng chứng thật; cuối bước dùng báo cáo mục 1 và STOP, chờ xác nhận ID kế tiếp. Dùng B/T/R ở mục 2 khi có code tương ứng; regression dịch text là bắt buộc nếu đổi code dùng chung. Không tải/cài model, xin quyền, đổi signing/minimum macOS hoặc publish chỉ dựa vào việc chúng được nhắc trong roadmap.
+
+Prompt dùng cho từng bước (thay Lxx bằng đúng một ID):
+
+```text
+Chỉ thực hiện Lxx trong CODEX_RUNBOOK.md theo PLAN §24.
+Đọc AGENTS.md và docs/PROGRESS.md; xác minh gate nghiệm thu Feature 1.
+Giữ nguyên chức năng dịch text; không thực hiện ID khác.
+Báo file thay đổi, kiểm tra/exit code, manual checks, giới hạn và rollback.
+STOP / WAIT FOR USER CONFIRMATION sau bước này, kể cả khi PASS.
+```
+
+### L01 — Chốt capture, ASR local và tiêu chí đo
+
+- **Mục tiêu:** xác minh khả năng lấy audio cuộc họp trên máy và chọn giải pháp local tối thiểu; không sửa code text.
+- **Thực hiện:** kiểm tra môi trường hiện có; hỏi app họp chính nếu chưa biết. Đối chiếu tài liệu chính thức hiện hành về capture/lọc nguồn/quyền/SDK và ASR model/runtime/license. Chốt cách chỉ lấy nguồn đã chọn, không mic riêng; không âm thầm mở rộng sang toàn bộ system audio. Đề xuất EN→VI, model/tài nguyên, kích thước tải, chiến lược chia đoạn, giới hạn buffer/backlog và ngân sách latency dựa trên máy đích.
+- **File:** `docs/LIVE-DESIGN.md`, bổ sung mapping §24 vào `docs/SPEC-MAP.md`, progress. Giữ phiên bản macOS tối thiểu và cấu hình text; thay đổi lớn cần quyết định rõ trước bước phụ thuộc.
+- **Kiểm tra:** I; ghi bằng chứng API/model và phần chưa kiểm chứng. Khảo sát không đồng nghĩa benchmark PASS; dùng câu/audio tổng hợp cho phép thử sau này. Không cài/tải model trong bước này.
+- **Hoàn tất:** người dùng chốt nguồn hỗ trợ, runtime/model và ngưỡng nghiệm thu (latency, backlog, tài nguyên, chất lượng). Nếu còn phụ thuộc tải model mới đo được, ghi ngưỡng tạm và điều kiện xác nhận ở L03 trước L04, không giả có số đo.
+- **Rollback:** hoàn nguyên đúng tài liệu L01. **STOP**; đề xuất L02 khi các quyết định cần cho L02 đã rõ.
+
+### L02 — Audio capture và vòng đời Start/Stop
+
+- **Mục tiêu:** thu đúng nguồn họp được chọn, chỉ khi Start; chưa ASR/dịch.
+- **Thực hiện:** triển khai capture native theo L01, lựa chọn nguồn và quyền cần thiết; không xin quyền lúc launch/chỉ dùng text. Không bật mic, ghi audio ra file hoặc phát ngược audio. Stop/đóng/quit phải ngắt capture và xóa buffer RAM; đổi/mất nguồn và revoke quyền có trạng thái rõ.
+- **File:** module capture/phiên Live tối thiểu, tests và tài liệu quyền/nguồn; không dựng pipeline text mới.
+- **Kiểm tra:** I/B/T; audio fixture và nguồn thực được phép, kiểm tra không thu mic/nguồn ngoài lựa chọn, giới hạn buffer, Start/Stop lặp và quyền thiếu/revoke. Smoke test ⌥T khi capture bật/tắt.
+- **Hoàn tất:** có bằng chứng đúng nguồn, teardown và text không hồi quy; không coi chỉ có level meter là bằng chứng lọc nguồn đúng.
+- **Rollback:** hoàn nguyên code capture/UI của bước, giữ app text chạy được; không tự reset quyền hệ thống. **STOP**; đề xuất L03.
+
+### L03 — ASR local và phụ đề gốc
+
+- **Mục tiêu:** audio cuộc họp → phụ đề gốc liên tục, không chờ dịch.
+- **Thực hiện:** chỉ cài/tải runtime/model đã được duyệt; kiểm tra sẵn có trước tải. Nối ASR, partial/final, chia đoạn và ID phiên/đoạn. Xử lý im lặng, model thiếu, nguồn mất và Stop; không cloud fallback, không lưu transcript.
+- **File:** adapter ASR, test fixtures tổng hợp/được phép, setup ASR trong docs và kết quả benchmark L01.
+- **Kiểm tra:** I/B/T; offline sau setup, câu ngắn/dài, im lặng, ngắt lời, tiếng Anh có accent, cancel và kết quả về muộn. Đo audio→phụ đề, CPU/RAM và xác nhận ngưỡng L01 trước L04; không đạt thì sửa/chọn lại trong sub-phase được duyệt.
+- **Hoàn tất:** phụ đề gốc cập nhật trong khi vẫn nghe, không bịa chữ từ im lặng; text regression PASS. Runtime/model chưa sẵn thì BLOCKED, không lấy kết quả fake làm ASR PASS.
+- **Rollback:** hoàn nguyên adapter và nối ASR; giữ capture của L02, không tự xóa model đã tải. **STOP**; đề xuất L04.
+
+### L04 — Dịch đoạn hội thoại local liên tục
+
+- **Mục tiêu:** vừa nghe/nhận dạng đoạn mới vừa dịch đoạn ổn định trước đó qua Ollama local.
+- **Thực hiện:** ghép nguồn/bản dịch theo ID đoạn và phiên; bỏ kết quả cũ sau correction/Stop. Dùng buffer/queue hữu hạn theo L01, không dịch toàn transcript theo mỗi token; quá tải hiển thị rõ, không âm thầm backlog vô hạn hoặc mất đoạn. Reuse client hiện có nếu phù hợp; cancellation Live không chạm request text.
+- **File:** điều phối dịch Live và tests; chỉ sửa client chung khi thực sự cần.
+- **Kiểm tra:** I/B/T; ASR correction, kết quả dịch sai thứ tự, model chậm/lỗi, Stop/start nhanh, queue đạt giới hạn và request text đang chạy. Offline với mẫu audio tổng hợp.
+- **Hoàn tất:** EN→VI local có bản dịch đúng đoạn, nguồn không đợi dịch và không nhận kết quả phiên cũ; text regression PASS.
+- **Rollback:** hoàn nguyên điều phối Live và đúng hunk client chung; giữ ASR L03. **STOP**; đề xuất L05.
+
+### L05 — Cửa sổ phụ đề song ngữ như mẫu
+
+- **Mục tiêu:** giao diện LIVE gồm phụ đề gốc trên, bản dịch dưới, Start/Stop riêng.
+- **Thực hiện:** nối pipeline thật; cửa sổ nổi di chuyển/resize, wrap/scroll, trạng thái nghe/dịch/chờ/lỗi. Ghép cặp đúng đoạn; giới hạn số đoạn giữ trong RAM. Đóng cửa sổ dừng phiên; không đổi ⌥T hay cơ chế đóng popup text.
+- **File:** cửa sổ/view Live và tests trạng thái/layout; không thay thế popup text.
+- **Kiểm tra:** I/B/T; người dùng đối chiếu mẫu với audio thật được phép; font tiếng Việt, câu dài, dark/light, nhiều màn hình, focus và Start/Stop/Close. Không dùng animation echo để báo dịch thật.
+- **Hoàn tất:** cả hai phần cập nhật liên tục, rõ đoạn đang chờ dịch, không cướp focus; text regression PASS.
+- **Rollback:** hoàn nguyên UI Live của bước, giữ pipeline trước đó. **STOP**; đề xuất L06.
+
+### L06 — Hai feature hoạt động độc lập và phục hồi lỗi
+
+- **Mục tiêu:** bảo vệ dịch text khi Live sử dụng tài nguyên cùng máy/model.
+- **Thực hiện:** kiểm tra cả hai feature đồng thời; sửa contention/cancel theo số đo với cơ chế đơn giản nhất. Text tiếp tục đáp ứng; Live giới hạn backlog và hiển thị quá tải. Bao phủ model/runtime unavailable, quyền bị thu hồi, đổi thiết bị output, sleep/wake và nguồn họp đóng.
+- **File:** sửa tối thiểu điều phối/tài nguyên nếu có lỗi, tests regression hai feature.
+- **Kiểm tra:** I/B/T/R; ⌥T→stream→Copy/Close/cancel khi Live tắt, đang chạy và vừa Stop; nhiều trigger, model chậm và teardown. Không bắt text chờ cấp quyền hoặc tải model ASR.
+- **Hoàn tất:** không hủy chéo request/phiên, không đóng nhầm cửa sổ, không hồi quy text; lỗi Live không làm app mất khả năng dịch text.
+- **Rollback:** hoàn nguyên đúng hunk tích hợp, giữ release text đã nghiệm thu. **STOP**; đề xuất L07.
+
+### L07 — QA Live, hiệu năng và riêng tư
+
+- **Mục tiêu:** kiểm chứng PLAN §24.5 trên máy đích.
+- **Thực hiện:** lập matrix app họp thực có sẵn và nguồn được hỗ trợ; chạy ít nhất 30 phút, mẫu tiếng Anh được phép, speech nhanh/chậm, silence và mất nguồn. Đo p50/p95 latency từng chặng, end-to-end, backlog, CPU/RAM; đối chiếu ngưỡng đã chốt L01/L03. Audit code/network/log/storage, capture scope và mic.
+- **File:** `docs/LIVE-QA.md`, compatibility/privacy và progress; lỗi có reproduction, không mở rộng feature trong QA.
+- **Kiểm tra:** I/B/T/R nếu cần theo thay đổi; offline với audio phát tại máy (không dùng việc cuộc họp Internet bị ngắt làm lỗi pipeline); chạy lại matrix text đồng thời. Báo app chưa có là NOT RUN; không tự cài.
+- **Hoàn tất:** đủ bằng chứng cho DoD Live và text regression; blocker hoặc ngưỡng chưa đạt phải ghi FAIL/BLOCKED, không chuyển nghiệm thu.
+- **Rollback:** giữ artifact/text release trước; sửa lỗi trong sub-phase riêng được duyệt. **STOP**; đề xuất L08.
+
+### L08 — Bàn giao và nghiệm thu Feature 2
+
+- **Mục tiêu:** bàn giao bản có cả dịch text và Live cuộc họp, không publish tự động.
+- **Thực hiện:** cập nhật README/setup riêng ASR và Ollama, quyền Live, nguồn hỗ trợ, Start/Stop, giới hạn/độ trễ và cách quay lại bản text. Build Release theo signing/kênh đã chốt; không bắt người dùng text cài ASR để tiếp tục dùng text.
+- **File:** README, release/QA checklist, artifact/checksum ngoài Git; version mới do người dùng chốt, không ghi đè artifact Feature 1.
+- **Kiểm tra:** I/R/T; người dùng thử hai feature trên đúng Release binary, quyền, offline sau setup và quit/relaunch. Không dùng kết quả Debug thay bằng chứng Release.
+- **Hoàn tất:** người dùng nghiệm thu riêng Live theo §24.5, text vẫn đạt DoD §20; phần chưa test phải ghi rõ. Không tự tag/push/notarize/upload.
+- **Rollback:** dùng lại artifact Feature 1, giữ model/quyền/dữ liệu cấu hình của người dùng. **STOP / WAIT FOR USER CONFIRMATION**; không có bước tự động tiếp theo.

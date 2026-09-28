@@ -76,17 +76,13 @@ struct ShellTests {
     }
 
     @Test func shellUsesInjectedReadinessAndShutdownClearsState() {
-        struct FakeReadiness: RuntimeReadinessProviding {
-            let status: RuntimeReadiness = .unavailable
-        }
-        let coordinator = AppCoordinator(readiness: FakeReadiness(), permission: .fake())
-        #expect(coordinator.runtimeStatus == "Không khả dụng")
+        let coordinator = AppCoordinator.fake()
+        #expect(coordinator.readiness.runtime == .notChecked)
         let id = coordinator.translation.begin()
         coordinator.translation.receive("synthetic", for: id)
         coordinator.shutdown()
         coordinator.translation.receive("late", for: id)
         #expect(coordinator.translation.phase == .idle)
         #expect(coordinator.translation.output.isEmpty)
-        #expect(AppCoordinator(readiness: UnconfiguredReadinessService(), permission: .fake()).runtimeStatus == "Chưa kiểm tra")
     }
 }

@@ -1,6 +1,6 @@
 # Đối chiếu PLAN với runbook — S05
 
-Mapping là kế hoạch kiểm chứng, không chứng nhận feature đã làm hoặc cấp quyền cho bước tương lai. S01–S04 đã có bằng chứng trong PROGRESS.md; toàn bộ feature sản phẩm vẫn chưa triển khai. Các số § dưới đây là mục của PLAN.md.
+Mapping là kế hoạch kiểm chứng, không chứng nhận feature đã làm hoặc cấp quyền cho bước tương lai. Bảng gốc được lập tại S05; trạng thái triển khai hiện tại xem PROGRESS.md. DOC01 bổ sung Feature 2, không thay đổi trạng thái hoặc thứ tự các bước dịch text. Các số § dưới đây là mục của PLAN.md.
 
 ## Yêu cầu sản phẩm
 
@@ -25,7 +25,7 @@ Mapping là kế hoạch kiểm chứng, không chứng nhận feature đã làm
 | §15 | Shortcut→popup <150 ms, gửi Ollama ngay, first token sớm nhất có thể | S10 timeout AX, S12–S14 panel path, S20 stream; S27 đo từ trigger, ghi cold/warm riêng. Chưa có số đo |
 | §15 | Lightweight, app không load model, Ollama quản lý model | S18 ranh giới client; S27 CPU/RAM/idle; không tự định mức ngoài spec |
 | §16 | Version 0.1.0, ổn định 10 mục MVP trước mở rộng | S02/S03 version; mapping MVP bên dưới; S26–S31 kiểm chứng |
-| §17 | Không OCR/screen/voice/history/cloud sync/browser extension/iOS/Windows/providers/account/analytics/RAG/agent/rewrite/grammar/summarize/explain | Guardrail mọi bước; S28 audit; không tạo module cho tính năng ngoài scope |
+| §17 | MVP dịch text không có Live cuộc họp (được lên kế hoạch riêng §24); không OCR/screen/history/cloud sync/browser extension/iOS/Windows/providers/account/analytics/RAG/agent/rewrite/grammar/summarize/explain | Guardrail mọi bước; S28 audit; không tạo module cho tính năng ngoài scope |
 | §19 | LanguageDetector, OllamaClient, TranslationService, PopupPositioner unit tests | Test target S06; tests logic ở bước liên quan S12/S14/S18–S23; tổng hợp S26 |
 | §19 | Short/long/multiline, EN/VI/mixed, emoji/Unicode/code/empty | Fixtures tổng hợp S10/S19/S21/S22/S26; manual QA S27 |
 | §3, §18, §19 | Safari, Chrome, Slack, Notion, VS Code, Mail, Pages, Apple Notes, Preview/PDF; app AX khác | S10–S12 giới hạn; matrix S27 gồm cả Pages dù danh sách §19 không nhắc lại. App chưa có → NOT RUN, không tự cài; PDF scan không text layer không thuộc OCR MVP |
@@ -71,3 +71,18 @@ Mapping là kế hoạch kiểm chứng, không chứng nhận feature đã làm
 ## Review S05
 
 Đã đối chiếu toàn bộ §1–§23, F01–F08, 10 mục MVP, sáu milestones, test matrix và DoD. Mọi mục có owner step hoặc decision gate. Flow shortcut→snapshot→route→panel→Ollama→stream được review tĩnh trong ARCHITECTURE.md, bao gồm focus và request ID. Chưa chạy manual integration hoặc test tính năng ở S05.
+
+
+## DOC01 — Mapping Feature 2, chỉ sau nghiệm thu dịch text
+
+S01–S31 và các mapping Feature 1 ở trên được giữ nguyên. “Streaming” ở F04/S19–S20 là hiển thị dần bản dịch text, không phải nghe/dịch cuộc họp.
+
+| PLAN | Yêu cầu / tiêu chí | Bước thực hiện và kiểm chứng |
+|---|---|---|
+| §24.1, §24.4 | Audio nguồn họp được chọn; không mic riêng; ASR và dịch local | L01 chốt feasibility/runtime/model/quyền; L02 capture; L03 ASR; L04 Ollama; L07 audit |
+| §24.2 | Phụ đề gốc trên, bản dịch dưới; Start/Stop riêng; nghe tiếp trong khi dịch | L03–L05; nghiệm thu giao diện mẫu L05/L08 |
+| §24.2 | Partial/final, ghép đúng đoạn/phiên, bỏ kết quả cũ, buffer/queue hữu hạn | L03–L04 tests; L06 lỗi/tài nguyên; L07 kiểm thử dài |
+| §24.3 | Feature 1 hoàn tất trước; không hồi quy ⌥T/popup/settings; cancellation độc lập | Gate S31→L01; regression mỗi bước dùng chung code; L06/L07/L08 |
+| §24.4–§24.5 | Đo latency/backlog/CPU/RAM, phiên ≥30 phút, offline và riêng tư | Ngưỡng L01, xác nhận đo ASR L03, QA L07, nghiệm thu L08 |
+
+L01–L08 đều NOT RUN và chưa được cấp phép triển khai. Chỉ việc cập nhật tài liệu DOC01 được người dùng yêu cầu; không thay thế xác nhận bước kế tiếp của Feature 1.

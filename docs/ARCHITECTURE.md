@@ -97,3 +97,18 @@ Shell đã dùng AppDelegate/AppCoordinator, MenuBarExtra, Settings và protocol
 AccessibilityPermissionService triển khai hàng "AccessibilityPermissionService" trong bảng trên: đọc trust qua AXIsProcessTrusted, chỉ prompt khi người dùng bấm Request Access (tối đa một lần mỗi lần chạy), mở Privacy & Security › Accessibility. Trạng thái denied và chưa cấp gộp là notGranted vì macOS không phân biệt. Chưa đọc selected text; kiểm chứng TCC thật ở S08.
 
 Quyết định sandbox (S07, người dùng duyệt): App Sandbox chặn hộp thoại và đăng ký quyền Accessibility (bản chẩn đoán không sandbox hiện hộp thoại, bản sandbox thì không). Target app đặt ENABLE_APP_SANDBOX = NO cho Debug và Release. Hệ quả: không phân phối qua Mac App Store; route phát hành chốt ở S28. Việc đọc selected text qua AX từ app khác vẫn cần kiểm chứng ở S10.
+
+## Ghi nhận S09–S10
+
+- S09: GlobalShortcutService dùng Carbon RegisterEventHotKey (exclusive) cho ⌥T; không cần Input Monitoring; một lần nhấn = một trigger.
+- S10: SelectedTextService chụp SelectionSnapshot bất biến ngay khi trigger, đọc AX trên queue riêng với messaging timeout 0,25 s, kiểm tra secure input trước khi đọc text, từ chối khi focus/app đổi trong lúc đọc. Snapshot chỉ ở RAM; UI debug tạm chỉ trong bản Debug.
+
+Ghi nhận S12: anchor lấy từ `kAXBoundsForRangeParameterizedAttribute`, đổi AX→AppKit chỉ theo frame màn chính, chọn màn theo diện tích giao lớn nhất và cắt theo visibleFrame; thiếu/không hợp lệ/ngoài màn → vị trí chuột lúc trigger, clamp vào visibleFrame. Popup (S13/S14) đặt theo `SelectionAnchor.rect` và phải nằm trong `visibleFrame`.
+
+Ghi nhận S13: popup là NSPanel `.nonactivatingPanel` hiển thị bằng `orderFrontRegardless` (không lấy key, không activate app); Esc là Carbon hot key chỉ đăng ký khi popup đang hiện (mỗi registrar có hot key ID riêng); fallback khi Esc bị chiếm: panel nhận key để xử lý `cancelOperation`. Không đóng khi click ra ngoài (PLAN chỉ nêu Esc/Close). Copy chỉ khi bấm nút.
+
+Ghi nhận S14: `TranslationCoordinator` là owner của luồng ⌥T và `TranslationStateMachine`; `AppCoordinator` chỉ còn composition. Mỗi trigger hủy capture/request/notice trước, request ID chặn kết quả cũ; Esc/× hủy stream và xóa output. `TranslationProviding` là seam cho Ollama client (S18–S20); hiện dùng `PlaceholderTranslationService` phát lại chính văn bản đã chọn, không network. UI debug tạm S10–S13 đã gỡ.
+
+Ghi nhận S18: `OllamaClient` (transport seam, chỉ loopback, chặn redirect, kiểm tra URL request/response) tách khỏi `TranslationModelConfiguration` (tag + prompt theo model); `OllamaReadinessService` là nguồn trạng thái runtime/model cho menu và Settings. Luồng ⌥T vẫn dùng placeholder đến S20.
+
+Ghi nhận S20: `OllamaTranslationService` (TranslationProviding) dùng chung `OllamaReadinessService` với menu/Settings; coordinator gộp render 40 ms, lỗi giữ partial + thông báo PLAN §14; hủy Task lan tới URLSession và Ollama (server log `cancel task`).

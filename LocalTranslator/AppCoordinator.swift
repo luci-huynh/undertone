@@ -1,43 +1,51 @@
 import Foundation
-
-@MainActor
-protocol RuntimeReadinessProviding {
-    var status: RuntimeReadiness { get }
-}
-
-enum RuntimeReadiness: Equatable {
-    case notChecked
-    case available
-    case unavailable
-
-    var label: String {
-        switch self {
-        case .notChecked: "Chưa kiểm tra"
-        case .available: "Sẵn sàng"
-        case .unavailable: "Không khả dụng"
-        }
-    }
-}
-
-/// Inert dependency for the shell: does not inspect processes or use the network.
-struct UnconfiguredReadinessService: RuntimeReadinessProviding {
-    let status: RuntimeReadiness = .notChecked
-}
+import os
 
 @MainActor
 final class AppCoordinator {
-    private let readiness: any RuntimeReadinessProviding
+    let readiness: OllamaReadinessService
     let permission: AccessibilityPermissionService
-    let translation = TranslationStateMachine()
+    let shortcut: GlobalShortcutService
+    let flow: TranslationCoordinator
+    let selectionTrigger: SelectionTriggerService
+    let launchAtLogin: LaunchAtLoginService
 
-    init(readiness: any RuntimeReadinessProviding, permission: AccessibilityPermissionService) {
+    init(
+        readiness: OllamaReadinessService,
+        permission: AccessibilityPermissionService,
+        shortcut: GlobalShortcutService,
+        flow: TranslationCoordinator,
+        selectionTrigger: SelectionTriggerService,
+        launchAtLogin: LaunchAtLoginService
+    ) {
         self.readiness = readiness
         self.permission = permission
+        self.shortcut = shortcut
+        self.flow = flow
+        self.selectionTrigger = selectionTrigger
+        self.launchAtLogin = launchAtLogin
+        flow.onOpenAccessibilitySettings = { [permission] in permission.openSystemSettings() }
     }
 
-    var runtimeStatus: String { readiness.status.label }
+    var translation: TranslationStateMachine { flow.state }
+
+    func start() {
+        permission.refresh()
+        readiness.start()
+        // ⌥T and the selection button start the same flow; either removes the button.
+        shortcut.onTrigger = { [weak self] in
+            self?.selectionTrigger.hide()
+            self?.flow.trigger()
+        }
+        selectionTrigger.onTrigger = { [weak self] in self?.flow.trigger() }
+        shortcut.start()
+        selectionTrigger.start()
+    }
 
     func shutdown() {
-        translation.dismiss()
+        selectionTrigger.stop()
+        shortcut.stop()
+        readiness.stop()
+        flow.shutdown()
     }
 }

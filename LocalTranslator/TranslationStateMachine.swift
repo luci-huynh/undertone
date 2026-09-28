@@ -7,9 +7,8 @@ final class TranslationStateMachine {
         case idle, loading, streaming, success, error, cancelled
     }
 
-    enum Failure: Equatable {
-        case unavailable, emptyOutput
-    }
+    /// Failures are the normalised translation errors (S23).
+    typealias Failure = TranslationError
 
     private(set) var phase: Phase = .idle
     private(set) var requestID: UUID?
